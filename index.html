@@ -112,11 +112,13 @@
 
     treatButton.addEventListener("click", () => {
       treats += treatsPerClick;
+
+      // Earn good boys without resetting treats
       if (treats >= 10) {
         const earned = Math.floor(treats / 10);
-        goodBoys += earned;
-        treats -= earned * 10;
+        goodBoys = earned; // milestone version
       }
+
       updateStats();
       checkButtons();
     });
@@ -178,11 +180,13 @@
     // Auto treat tick
     setInterval(() => {
       treats += treatsPerSecond;
+
+      // Earn good boys without losing treats
       if (treats >= 10) {
         const earned = Math.floor(treats / 10);
-        goodBoys += earned;
-        treats -= earned * 10;
+        goodBoys = earned; // milestone version
       }
+
       updateStats();
       checkButtons();
     }, 1000);
