@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Brady Pate: The Goodest Boy</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', cursive;
+      text-align: center;
+      background: #fff5e1;
+      color: #333;
+    }
+    h1 {
+      font-size: 3em;
+      margin-top: 30px;
+      color: #4b2e83;
+    }
+    #treatButton {
+      margin-top: 20px;
+      padding: 20px 40px;
+      font-size: 2em;
+      background-color: #ffcc00;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    #treatButton:hover {
+      background-color: #ff9900;
+    }
+    #stats {
+      margin: 20px;
+      font-size: 1.5em;
+    }
+    .section {
+      margin-top: 30px;
+    }
+    .upgrade, .autofarm {
+      margin: 10px auto;
+      padding: 10px 20px;
+      font-size: 1.1em;
+      background-color: #8bc34a;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      display: block;
+      width: 300px;
+    }
+    .upgrade:disabled, .autofarm:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+    footer {
+      margin-top: 40px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Brady Pate: The Goodest Boy</h1>
+
+  <p id="stats">
+    🦴 Treats: <span id="treats">0</span><br>
+    ⭐ Good Boys: <span id="goodBoys">0</span><br>
+    🐶 Treats per click: <span id="tpc">1</span><br>
+    ⚙️ Auto Treats/sec: <span id="tps">0</span>
+  </p>
+
+  <button id="treatButton">Give Brady a Treat 🍖</button>
+
+  <div class="section">
+    <h2>Upgrades (Treats)</h2>
+    <button class="upgrade" id="bellyRubs" disabled>Buy Belly Rubs (+1/click) – 10 Treats</button>
+    <button class="upgrade" id="walkies" disabled>Buy Walkies (+5/click) – 50 Treats</button>
+    <button class="upgrade" id="goldenBone" disabled>Golden Bone (+100/click) – 500 Treats</button>
+  </div>
+
+  <div class="section">
+    <h2>Auto Farm (Good Boys)</h2>
+    <button class="autofarm" id="squirrel" disabled>Hire Squirrel Scout (+1/sec) – 5 Good Boys</button>
+    <button class="autofarm" id="grandma" disabled>Hire Grandma (+5/sec) – 20 Good Boys</button>
+    <button class="autofarm" id="army" disabled>Hire Golden Retriever Army (+20/sec) – 100 Good Boys</button>
+  </div>
+
+  <footer>
+    <p>Brady is the goodest boy. Forever. 🐾</p>
+  </footer>
+
+  <script>
+    let treats = 0;
+    let goodBoys = 0;
+    let treatsPerClick = 1;
+    let treatsPerSecond = 0;
+
+    const treatDisplay = document.getElementById("treats");
+    const goodBoyDisplay = document.getElementById("goodBoys");
+    const tpcDisplay = document.getElementById("tpc");
+    const tpsDisplay = document.getElementById("tps");
+    const treatButton = document.getElementById("treatButton");
+
+    const upgrades = {
+      bellyRubs: { cost: 10, bonus: 1, bought: false },
+      walkies: { cost: 50, bonus: 5, bought: false },
+      goldenBone: { cost: 500, bonus: 100, bought: false }
+    };
+
+    const autoFarms = {
+      squirrel: { cost: 5, rate: 1, bought: false },
+      grandma: { cost: 20, rate: 5, bought: false },
+      army: { cost: 100, rate: 20, bought: false }
+    };
+
+    treatButton.addEventListener("click", () => {
+      treats += treatsPerClick;
+      if (treats >= 10) {
+        const earned = Math.floor(treats / 10);
+        goodBoys += earned;
+        treats -= earned * 10;
+      }
+      updateStats();
+      checkButtons();
+    });
+
+    function updateStats() {
+      treatDisplay.textContent = treats;
+      goodBoyDisplay.textContent = goodBoys;
+      tpcDisplay.textContent = treatsPerClick;
+      tpsDisplay.textContent = treatsPerSecond;
+    }
+
+    function checkButtons() {
+      for (const key in upgrades) {
+        const btn = document.getElementById(key);
+        if (!upgrades[key].bought && treats >= upgrades[key].cost) {
+          btn.disabled = false;
+        } else {
+          btn.disabled = true;
+        }
+      }
+      for (const key in autoFarms) {
+        const btn = document.getElementById(key);
+        if (!autoFarms[key].bought && goodBoys >= autoFarms[key].cost) {
+          btn.disabled = false;
+        } else {
+          btn.disabled = true;
+        }
+      }
+    }
+
+    // Upgrade clicks
+    for (const key in upgrades) {
+      document.getElementById(key).addEventListener("click", () => {
+        const upgrade = upgrades[key];
+        if (!upgrade.bought && treats >= upgrade.cost) {
+          treats -= upgrade.cost;
+          treatsPerClick += upgrade.bonus;
+          upgrade.bought = true;
+          updateStats();
+          checkButtons();
+        }
+      });
+    }
+
+    // Auto-farm upgrades
+    for (const key in autoFarms) {
+      document.getElementById(key).addEventListener("click", () => {
+        const farm = autoFarms[key];
+        if (!farm.bought && goodBoys >= farm.cost) {
+          goodBoys -= farm.cost;
+          treatsPerSecond += farm.rate;
+          farm.bought = true;
+          updateStats();
+          checkButtons();
+        }
+      });
+    }
+
+    // Auto treat tick
+    setInterval(() => {
+      treats += treatsPerSecond;
+      if (treats >= 10) {
+        const earned = Math.floor(treats / 10);
+        goodBoys += earned;
+        treats -= earned * 10;
+      }
+      updateStats();
+      checkButtons();
+    }, 1000);
+  </script>
+</body>
+</html>
