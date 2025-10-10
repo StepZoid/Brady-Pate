@@ -132,12 +132,12 @@ function createFloating(text, e){
   span.className='floating';
   span.textContent = text;
   document.body.appendChild(span);
-  span.style.left = (e.pageX || e.clientX)+'px';
-  span.style.top = (e.pageY || e.clientY)+'px';
+  span.style.left=(e.pageX || e.clientX)+'px';
+  span.style.top=(e.pageY || e.clientY)+'px';
   setTimeout(()=>span.remove(),1000);
 }
 
-// Upgrades
+// Upgrades with continuous scaling
 for(const key in upgrades){
   document.getElementById(key).addEventListener("click", ()=>{
     const up = upgrades[key];
@@ -145,7 +145,7 @@ for(const key in upgrades){
       treats -= up.cost;
       treatsPerClick += up.bonus;
       upgradeCounts[key]++;
-      up.cost = Math.floor(up.cost*1.2);
+      up.cost = Math.floor(up.cost * 1.2);
       document.getElementById(up.counterId).textContent = upgradeCounts[key];
       document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
       upgradeSound.play();
@@ -154,7 +154,7 @@ for(const key in upgrades){
   });
 }
 
-// Auto-farms
+// Auto-farms with continuous scaling
 for(const key in autoFarms){
   document.getElementById(key).addEventListener("click", ()=>{
     const farm = autoFarms[key];
@@ -162,7 +162,7 @@ for(const key in autoFarms){
       goodBoys -= farm.cost;
       treatsPerSecond += farm.rate;
       farmCounts[key]++;
-      farm.cost = Math.floor(farm.cost*1.2);
+      farm.cost = Math.floor(farm.cost * 1.2);
       document.getElementById(farm.counterId).textContent = farmCounts[key];
       document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
       upgradeSound.play();
@@ -200,7 +200,7 @@ function spawnHiddenTreat(){
   setTimeout(()=>hidden.remove(),5000);
 }
 
-// Spawn hidden treats randomly every 10-20s
+// Spawn hidden treats randomly every 10 seconds
 setInterval(()=>{
   if(Math.random()<0.6) spawnHiddenTreat();
 },10000);
@@ -209,8 +209,4 @@ function updateStats(){
   treatDisplay.textContent=Math.floor(treats);
   goodBoyDisplay.textContent=goodBoys;
   tpcDisplay.textContent=treatsPerClick;
-  tpsDisplay.textContent=treatsPerSecond;
-}
-</script>
-</body>
-</html>
+  tpsDisplay.textContent=treat
