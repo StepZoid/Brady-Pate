@@ -87,21 +87,19 @@ const autoFarms={
 treatButton.addEventListener("click", e=>{
   treats += treatsPerClick;
   goodBoys = Math.floor(treats/10);
-  createFloating("+🍖", e);
-  clickSound.play();
-  updateStats();
-});
 
-// FLOATING
-function createFloating(text,e){
+  // Floating animation
   const span=document.createElement('span');
   span.className='floating';
-  span.textContent=text;
+  span.textContent='+🍖';
   document.body.appendChild(span);
   span.style.left=(e.pageX||e.clientX)+'px';
   span.style.top=(e.pageY||e.clientY)+'px';
   setTimeout(()=>span.remove(),1000);
-}
+
+  clickSound.play();
+  updateStats();
+});
 
 // UPGRADES
 for(const key in upgrades){
@@ -110,10 +108,10 @@ for(const key in upgrades){
     const up=upgrades[key];
     if(treats>=up.cost){
       treats-=up.cost;
-      treatsPerClick+=up.bonus;
+      treatsPerClick += up.bonus;
       upgradeCounts[key]++;
-      up.cost=Math.floor(up.cost*1.2);
-      up.bonus=Math.max(1,Math.floor(up.baseBonus*upgradeCounts[key]*1.2)); // scale based on owned
+      up.cost = Math.floor(up.cost * 1.2);
+      up.bonus = Math.max(1, Math.floor(up.baseBonus * Math.pow(1.2, upgradeCounts[key])));
       btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
       upgradeSound.play();
       updateStats();
@@ -138,12 +136,12 @@ for(const key in autoFarms){
   });
 }
 
-// PASSIVE TREATS + HIDDEN PROGRESS
+// PASSIVE TREATS + HIDDEN TREATS
 setInterval(()=>{
-  treats+=treatsPerSecond;
-  goodBoys=Math.floor(treats/10);
-  hiddenProgress+=1;
-  autoProgress.style.width=Math.min(hiddenProgress*10,100)+'%';
+  treats += treatsPerSecond;
+  goodBoys = Math.floor(treats/10);
+  hiddenProgress += 1;
+  autoProgress.style.width = Math.min(hiddenProgress*10,100)+'%';
   if(hiddenProgress>=10){ spawnHiddenTreat(); hiddenProgress=0; }
   updateStats();
 },1000);
@@ -157,8 +155,8 @@ function spawnHiddenTreat(){
   hidden.style.top=Math.random()*(window.innerHeight-30)+'px';
   document.body.appendChild(hidden);
   hidden.addEventListener('click',()=>{
-    treats+=50;
-    goodBoys=Math.floor(treats/10);
+    treats += 50;
+    goodBoys = Math.floor(treats/10);
     createFloating('+50🍖',{pageX:parseInt(hidden.style.left), pageY:parseInt(hidden.style.top)});
     hiddenSound.play();
     hidden.remove();
@@ -176,10 +174,10 @@ setInterval(()=>{
 },1000);
 
 function updateStats(){
-  treatDisplay.textContent=Math.floor(treats);
-  goodBoyDisplay.textContent=goodBoys;
-  tpcDisplay.textContent=treatsPerClick;
-  tpsDisplay.textContent=treatsPerSecond;
+  treatDisplay.textContent = Math.floor(treats);
+  goodBoyDisplay.textContent = goodBoys;
+  tpcDisplay.textContent = treatsPerClick;
+  tpsDisplay.textContent = treatsPerSecond;
 }
 </script>
 </body>
