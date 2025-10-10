@@ -4,39 +4,69 @@
 <meta charset="UTF-8">
 <title>Brady Pate: The Goodest Boy</title>
 <style>
-body { font-family: 'Comic Sans MS', cursive; text-align: center; background: #fff5e1; color: #333; overflow-x: hidden; }
-h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; }
-#loginScreen { margin-top: 100px; }
-#loginScreen input { font-size: 1.2em; padding: 8px; margin: 5px; border-radius: 6px; border: 1px solid #aaa; }
-#loginScreen button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; background-color: #8bc34a; cursor: pointer; }
-#game { display: none; }
-#treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background-color: #ffcc00; border: none; border-radius: 12px; cursor: pointer; position: relative; }
+body {
+  font-family: 'Comic Sans MS', cursive;
+  text-align: center;
+  background: linear-gradient(to bottom, #fff5e1, #ffd580);
+  color: #333;
+  overflow-x: hidden;
+}
+h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff; }
 #stats { margin: 20px; font-size: 1.5em; }
+
+#treatButton {
+  margin-top: 20px;
+  padding: 20px 40px;
+  font-size: 2em;
+  background: radial-gradient(circle, #ffec3d, #ffcc00);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+#treatButton:hover { transform: scale(1.1); box-shadow: 0 0 20px #ffdd00; }
+
 .section { margin-top: 30px; }
-.upgrade, .autofarm { margin: 10px auto; padding: 10px 20px; font-size: 1.1em; background-color: #8bc34a; border: none; border-radius: 8px; cursor: pointer; display: block; width: 350px; }
-footer { margin-top: 40px; color: #777; }
-.floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; }
-@keyframes floatUp { 0% { opacity: 1; transform: translateY(0px); } 100% { opacity: 0; transform: translateY(-50px); } }
+
+.upgrade, .autofarm {
+  margin: 10px auto;
+  padding: 12px 24px;
+  font-size: 1.1em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: block;
+  width: 360px;
+  transition: transform 0.2s, background 0.2s;
+}
+.upgrade:hover { transform: scale(1.05); background-color: #7ac142; }
+.autofarm:hover { transform: scale(1.05); background-color: #4a90e2; color: #fff; }
+
+.floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; pointer-events: none; }
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0px) scale(1); }
+  100% { opacity: 0; transform: translateY(-80px) scale(1.3); }
+}
+
+.progress-bar { height: 15px; width: 300px; background-color: #ddd; margin: 10px auto; border-radius: 8px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background-color: #ffcc00; transition: width 0.5s; }
+
+.hidden-treat { position: absolute; font-size: 24px; cursor: pointer; user-select: none; transition: transform 0.2s; }
+.hidden-treat:hover { transform: scale(1.5); }
 </style>
 </head>
 <body>
 
-<div id="loginScreen">
-<h1>Welcome to Brady’s World 🐶</h1>
-<p>Enter your username and password:</p>
-<input type="text" id="username" placeholder="Username"><br>
-<input type="password" id="password" placeholder="Password"><br>
-<button id="loginBtn">Login / Register</button>
-</div>
-
-<div id="game">
-<h1 id="welcomeTitle"></h1>
+<h1>Brady’s World 🐶</h1>
 <p id="stats">
 🦴 Treats: <span id="treats">0</span><br>
 ⭐ Good Boys: <span id="goodBoys">0</span><br>
 🐶 Treats per click: <span id="tpc">1</span><br>
 ⚙️ Auto Treats/sec: <span id="tps">0</span>
 </p>
+
 <button id="treatButton">Give Brady a Treat 🍖</button>
 
 <div class="section">
@@ -51,110 +81,63 @@ footer { margin-top: 40px; color: #777; }
 <button class="autofarm" id="squirrel">Squirrel Scout (+1/sec) – 5 Good Boys (Owned: <span id="squirrelCount">0</span>)</button>
 <button class="autofarm" id="grandma">Grandma (+5/sec) – 20 Good Boys (Owned: <span id="grandmaCount">0</span>)</button>
 <button class="autofarm" id="army">Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
+<div class="progress-bar"><div class="progress-fill" id="autoProgress"></div></div>
 </div>
 
-<footer>
-<p>Brady is the goodest boy. Forever. 🐾</p>
-<button id="logoutBtn">Logout</button>
-</footer>
-</div>
+<!-- Sound Effects -->
+<audio id="clickSound" src="https://freesound.org/data/previews/256/256113_3263906-lq.mp3"></audio>
+<audio id="upgradeSound" src="https://freesound.org/data/previews/256/256119_3263906-lq.mp3"></audio>
+<audio id="hiddenSound" src="https://freesound.org/data/previews/256/256120_3263906-lq.mp3"></audio>
 
 <script>
-let player = {};
-let treats = 0;
-let goodBoys = 0;
-let treatsPerClick = 1;
-let treatsPerSecond = 0;
-
-const loginScreen = document.getElementById("loginScreen");
-const game = document.getElementById("game");
-const usernameInput = document.getElementById("username");
-const passwordInput = document.getElementById("password");
-const loginBtn = document.getElementById("loginBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const welcomeTitle = document.getElementById("welcomeTitle");
-
+let treats = 0, goodBoys = 0, treatsPerClick = 1, treatsPerSecond = 0;
 const treatDisplay = document.getElementById("treats");
 const goodBoyDisplay = document.getElementById("goodBoys");
 const tpcDisplay = document.getElementById("tpc");
 const tpsDisplay = document.getElementById("tps");
 const treatButton = document.getElementById("treatButton");
+const autoProgress = document.getElementById("autoProgress");
 
-// Upgrade counters
-let upgradeCounts = { bellyRubs: 0, walkies: 0, goldenBone: 0 };
-let farmCounts = { squirrel: 0, grandma: 0, army: 0 };
+const clickSound = document.getElementById("clickSound");
+const upgradeSound = document.getElementById("upgradeSound");
+const hiddenSound = document.getElementById("hiddenSound");
+
+let upgradeCounts = { bellyRubs:0, walkies:0, goldenBone:0 };
+let farmCounts = { squirrel:0, grandma:0, army:0 };
 
 const upgrades = {
-  bellyRubs: { cost: 10, bonus: 1, counterId: 'bellyCount' },
-  walkies: { cost: 50, bonus: 5, counterId: 'walkiesCount' },
-  goldenBone: { cost: 500, bonus: 100, counterId: 'goldenCount' }
+  bellyRubs:{cost:10,bonus:1,counterId:'bellyCount'},
+  walkies:{cost:50,bonus:5,counterId:'walkiesCount'},
+  goldenBone:{cost:500,bonus:100,counterId:'goldenCount'}
 };
 
 const autoFarms = {
-  squirrel: { cost: 5, rate: 1, counterId: 'squirrelCount' },
-  grandma: { cost: 20, rate: 5, counterId: 'grandmaCount' },
-  army: { cost: 100, rate: 20, counterId: 'armyCount' }
+  squirrel:{cost:5,rate:1,counterId:'squirrelCount'},
+  grandma:{cost:20,rate:5,counterId:'grandmaCount'},
+  army:{cost:100,rate:20,counterId:'armyCount'}
 };
 
-// Save/load
-function saveProgress() {
-  const username = usernameInput.value;
-  const password = passwordInput.value;
-  const data = { treats, goodBoys, treatsPerClick, treatsPerSecond, upgradeCounts, farmCounts, upgrades, autoFarms };
-  localStorage.setItem(username + ":" + password, JSON.stringify(data));
-}
-
-function loadProgress(username, password) {
-  const data = localStorage.getItem(username + ":" + password);
-  if (data) {
-    const obj = JSON.parse(data);
-    treats = obj.treats;
-    goodBoys = obj.goodBoys;
-    treatsPerClick = obj.treatsPerClick;
-    treatsPerSecond = obj.treatsPerSecond;
-    upgradeCounts = obj.upgradeCounts || upgradeCounts;
-    farmCounts = obj.farmCounts || farmCounts;
-    Object.assign(upgrades, obj.upgrades || {});
-    Object.assign(autoFarms, obj.autoFarms || {});
-  }
-  updateStats();
-}
-
-// Login
-loginBtn.addEventListener("click", () => {
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value.trim();
-  if (!username || !password) return;
-  loginScreen.style.display = "none";
-  game.style.display = "block";
-  welcomeTitle.textContent = `${username}’s Good Boy Game 🐕`;
-  loadProgress(username, password);
-});
-
-// Logout
-logoutBtn.addEventListener("click", () => { saveProgress(); location.reload(); });
-
 // Click treats
-treatButton.addEventListener("click", e => {
+treatButton.addEventListener("click", e=>{
   treats += treatsPerClick;
-  goodBoys = Math.floor(treats / 10);
+  goodBoys = Math.floor(treats/10);
   createFloating("+🍖", e);
+  clickSound.play();
   updateStats();
-  saveProgress();
 });
 
 // Floating animation
 function createFloating(text, e){
   const span = document.createElement('span');
-  span.className = 'floating';
+  span.className='floating';
   span.textContent = text;
   document.body.appendChild(span);
-  span.style.left = e.pageX + 'px';
-  span.style.top = e.pageY + 'px';
+  span.style.left = (e.pageX || e.clientX)+'px';
+  span.style.top = (e.pageY || e.clientY)+'px';
   setTimeout(()=>span.remove(),1000);
 }
 
-// Infinite upgrades with scaling
+// Upgrades
 for(const key in upgrades){
   document.getElementById(key).addEventListener("click", ()=>{
     const up = upgrades[key];
@@ -162,11 +145,11 @@ for(const key in upgrades){
       treats -= up.cost;
       treatsPerClick += up.bonus;
       upgradeCounts[key]++;
-      up.cost = Math.floor(up.cost * 1.15);
+      up.cost = Math.floor(up.cost*1.2);
       document.getElementById(up.counterId).textContent = upgradeCounts[key];
       document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
+      upgradeSound.play();
       updateStats();
-      saveProgress();
     }
   });
 }
@@ -179,28 +162,54 @@ for(const key in autoFarms){
       goodBoys -= farm.cost;
       treatsPerSecond += farm.rate;
       farmCounts[key]++;
-      farm.cost = Math.floor(farm.cost * 1.15);
+      farm.cost = Math.floor(farm.cost*1.2);
       document.getElementById(farm.counterId).textContent = farmCounts[key];
       document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
+      upgradeSound.play();
       updateStats();
-      saveProgress();
     }
   });
 }
 
-// Passive treats
+// Passive treats + progress bar
 setInterval(()=>{
   treats += treatsPerSecond;
   goodBoys = Math.floor(treats/10);
   updateStats();
-  saveProgress();
+  autoProgress.style.width = ((treats % 10)*10)+'%';
 },1000);
 
+// Hidden treats
+function spawnHiddenTreat(){
+  const hidden = document.createElement('div');
+  hidden.textContent='🍖';
+  hidden.className='hidden-treat';
+  hidden.style.left=Math.random()*(window.innerWidth-30)+'px';
+  hidden.style.top=Math.random()*(window.innerHeight-30)+'px';
+  document.body.appendChild(hidden);
+
+  hidden.addEventListener('click', ()=>{
+    treats += 50;
+    goodBoys = Math.floor(treats/10);
+    createFloating('+50🍖',{pageX:parseInt(hidden.style.left), pageY:parseInt(hidden.style.top)});
+    hiddenSound.play();
+    hidden.remove();
+    updateStats();
+  });
+
+  setTimeout(()=>hidden.remove(),5000);
+}
+
+// Spawn hidden treats randomly every 10-20s
+setInterval(()=>{
+  if(Math.random()<0.6) spawnHiddenTreat();
+},10000);
+
 function updateStats(){
-  treatDisplay.textContent = Math.floor(treats);
-  goodBoyDisplay.textContent = goodBoys;
-  tpcDisplay.textContent = treatsPerClick;
-  tpsDisplay.textContent = treatsPerSecond;
+  treatDisplay.textContent=Math.floor(treats);
+  goodBoyDisplay.textContent=goodBoys;
+  tpcDisplay.textContent=treatsPerClick;
+  tpsDisplay.textContent=treatsPerSecond;
 }
 </script>
 </body>
