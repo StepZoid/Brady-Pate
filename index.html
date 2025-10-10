@@ -4,55 +4,19 @@
 <meta charset="UTF-8">
 <title>Brady Pate: The Goodest Boy</title>
 <style>
-body {
-  font-family: 'Comic Sans MS', cursive;
-  text-align: center;
-  background: linear-gradient(to bottom, #fff5e1, #ffd580);
-  color: #333;
-  overflow-x: hidden;
-}
+body { font-family: 'Comic Sans MS', cursive; text-align: center; background: linear-gradient(to bottom, #fff5e1, #ffd580); color: #333; overflow-x: hidden; }
 h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff; }
 #stats { margin: 20px; font-size: 1.5em; }
-
-#treatButton {
-  margin-top: 20px;
-  padding: 20px 40px;
-  font-size: 2em;
-  background: radial-gradient(circle, #ffec3d, #ffcc00);
-  border: none;
-  border-radius: 12px;
-  cursor: pointer;
-  position: relative;
-  transition: transform 0.2s, box-shadow 0.2s;
-}
+#treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background: radial-gradient(circle, #ffec3d, #ffcc00); border: none; border-radius: 12px; cursor: pointer; position: relative; transition: transform 0.2s, box-shadow 0.2s; }
 #treatButton:hover { transform: scale(1.1); box-shadow: 0 0 20px #ffdd00; }
-
 .section { margin-top: 30px; }
-
-.upgrade, .autofarm {
-  margin: 10px auto;
-  padding: 12px 24px;
-  font-size: 1.1em;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  display: block;
-  width: 360px;
-  transition: transform 0.2s, background 0.2s;
-}
+.upgrade, .autofarm { margin: 10px auto; padding: 12px 24px; font-size: 1.1em; border: none; border-radius: 8px; cursor: pointer; display: block; width: 360px; transition: transform 0.2s, background 0.2s; }
 .upgrade:hover { transform: scale(1.05); background-color: #7ac142; }
 .autofarm:hover { transform: scale(1.05); background-color: #4a90e2; color: #fff; }
-
 .floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; pointer-events: none; }
-
-@keyframes floatUp {
-  0% { opacity: 1; transform: translateY(0px) scale(1); }
-  100% { opacity: 0; transform: translateY(-80px) scale(1.3); }
-}
-
+@keyframes floatUp { 0% { opacity: 1; transform: translateY(0px) scale(1); } 100% { opacity: 0; transform: translateY(-80px) scale(1.3); } }
 .progress-bar { height: 15px; width: 300px; background-color: #ddd; margin: 10px auto; border-radius: 8px; overflow: hidden; }
-.progress-fill { height: 100%; width: 0%; background-color: #ffcc00; transition: width 0.5s; }
-
+.progress-fill { height: 100%; width: 0%; background-color: #ffcc00; transition: width 0.2s; }
 .hidden-treat { position: absolute; font-size: 24px; cursor: pointer; user-select: none; transition: transform 0.2s; }
 .hidden-treat:hover { transform: scale(1.5); }
 </style>
@@ -64,7 +28,8 @@ h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff
 🦴 Treats: <span id="treats">0</span><br>
 ⭐ Good Boys: <span id="goodBoys">0</span><br>
 🐶 Treats per click: <span id="tpc">1</span><br>
-⚙️ Auto Treats/sec: <span id="tps">0</span>
+⚙️ Auto Treats/sec: <span id="tps">0</span><br>
+⏱️ Time Played: <span id="timePlayed">0s</span>
 </p>
 
 <button id="treatButton">Give Brady a Treat 🍖</button>
@@ -84,26 +49,27 @@ h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff
 <div class="progress-bar"><div class="progress-fill" id="autoProgress"></div></div>
 </div>
 
-<!-- Sound Effects -->
 <audio id="clickSound" src="https://freesound.org/data/previews/256/256113_3263906-lq.mp3"></audio>
 <audio id="upgradeSound" src="https://freesound.org/data/previews/256/256119_3263906-lq.mp3"></audio>
 <audio id="hiddenSound" src="https://freesound.org/data/previews/256/256120_3263906-lq.mp3"></audio>
 
 <script>
 let treats = 0, goodBoys = 0, treatsPerClick = 1, treatsPerSecond = 0;
+let upgradeCounts = { bellyRubs:0, walkies:0, goldenBone:0 };
+let farmCounts = { squirrel:0, grandma:0, army:0 };
+let timePlayed = 0, hiddenProgress = 0;
+
 const treatDisplay = document.getElementById("treats");
 const goodBoyDisplay = document.getElementById("goodBoys");
 const tpcDisplay = document.getElementById("tpc");
 const tpsDisplay = document.getElementById("tps");
+const timeDisplay = document.getElementById("timePlayed");
 const treatButton = document.getElementById("treatButton");
 const autoProgress = document.getElementById("autoProgress");
 
 const clickSound = document.getElementById("clickSound");
 const upgradeSound = document.getElementById("upgradeSound");
 const hiddenSound = document.getElementById("hiddenSound");
-
-let upgradeCounts = { bellyRubs:0, walkies:0, goldenBone:0 };
-let farmCounts = { squirrel:0, grandma:0, army:0 };
 
 const upgrades = {
   bellyRubs:{cost:10,bonus:1,counterId:'bellyCount'},
@@ -117,7 +83,7 @@ const autoFarms = {
   army:{cost:100,rate:20,counterId:'armyCount'}
 };
 
-// Click treats
+// CLICK BUTTON
 treatButton.addEventListener("click", e=>{
   treats += treatsPerClick;
   goodBoys = Math.floor(treats/10);
@@ -126,7 +92,7 @@ treatButton.addEventListener("click", e=>{
   updateStats();
 });
 
-// Floating animation
+// FLOATING
 function createFloating(text, e){
   const span = document.createElement('span');
   span.className='floating';
@@ -137,76 +103,32 @@ function createFloating(text, e){
   setTimeout(()=>span.remove(),1000);
 }
 
-// Upgrades with continuous scaling
-for(const key in upgrades){
-  document.getElementById(key).addEventListener("click", ()=>{
+// UPGRADES
+for (const key in upgrades) {
+  const btn = document.getElementById(key);
+  btn.addEventListener("click", () => {
     const up = upgrades[key];
-    if(treats >= up.cost){
+    if (treats >= up.cost) {
       treats -= up.cost;
       treatsPerClick += up.bonus;
       upgradeCounts[key]++;
       up.cost = Math.floor(up.cost * 1.2);
-      document.getElementById(up.counterId).textContent = upgradeCounts[key];
-      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
+      up.bonus = Math.max(1, Math.floor(up.bonus * 1.2));
+      btn.innerHTML = `${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
       upgradeSound.play();
       updateStats();
     }
   });
 }
 
-// Auto-farms with continuous scaling
-for(const key in autoFarms){
-  document.getElementById(key).addEventListener("click", ()=>{
+// AUTO FARMS
+for (const key in autoFarms) {
+  const btn = document.getElementById(key);
+  btn.addEventListener("click", () => {
     const farm = autoFarms[key];
-    if(goodBoys >= farm.cost){
+    if (goodBoys >= farm.cost) {
       goodBoys -= farm.cost;
       treatsPerSecond += farm.rate;
       farmCounts[key]++;
       farm.cost = Math.floor(farm.cost * 1.2);
-      document.getElementById(farm.counterId).textContent = farmCounts[key];
-      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
-      upgradeSound.play();
-      updateStats();
-    }
-  });
-}
-
-// Passive treats + progress bar
-setInterval(()=>{
-  treats += treatsPerSecond;
-  goodBoys = Math.floor(treats/10);
-  updateStats();
-  autoProgress.style.width = ((treats % 10)*10)+'%';
-},1000);
-
-// Hidden treats
-function spawnHiddenTreat(){
-  const hidden = document.createElement('div');
-  hidden.textContent='🍖';
-  hidden.className='hidden-treat';
-  hidden.style.left=Math.random()*(window.innerWidth-30)+'px';
-  hidden.style.top=Math.random()*(window.innerHeight-30)+'px';
-  document.body.appendChild(hidden);
-
-  hidden.addEventListener('click', ()=>{
-    treats += 50;
-    goodBoys = Math.floor(treats/10);
-    createFloating('+50🍖',{pageX:parseInt(hidden.style.left), pageY:parseInt(hidden.style.top)});
-    hiddenSound.play();
-    hidden.remove();
-    updateStats();
-  });
-
-  setTimeout(()=>hidden.remove(),5000);
-}
-
-// Spawn hidden treats randomly every 10 seconds
-setInterval(()=>{
-  if(Math.random()<0.6) spawnHiddenTreat();
-},10000);
-
-function updateStats(){
-  treatDisplay.textContent=Math.floor(treats);
-  goodBoyDisplay.textContent=goodBoys;
-  tpcDisplay.textContent=treatsPerClick;
-  tpsDisplay.textContent=treat
+      btn.innerHTML = `${key.replace(/([A-Z])/g,' $1').trim()}
