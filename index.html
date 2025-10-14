@@ -10,10 +10,11 @@ h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff
 #treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background: radial-gradient(circle, #ffec3d, #ffcc00); border: none; border-radius: 12px; cursor: pointer; position: relative; transition: transform 0.2s, box-shadow 0.2s; }
 #treatButton:hover { transform: scale(1.1); box-shadow: 0 0 20px #ffdd00; }
 .section { margin-top: 30px; }
-.upgrade, .autofarm, #prestige { margin: 10px auto; padding: 12px 24px; font-size: 1.1em; border: none; border-radius: 8px; cursor: pointer; display: block; width: 360px; transition: transform 0.2s, background 0.2s; }
+.upgrade, .autofarm, #prestige, .shop-item { margin: 10px auto; padding: 12px 24px; font-size: 1.1em; border: none; border-radius: 8px; cursor: pointer; display: block; width: 360px; transition: transform 0.2s, background 0.2s; }
 .upgrade:hover { transform: scale(1.05); background-color: #7ac142; }
 .autofarm:hover { transform: scale(1.05); background-color: #4a90e2; color: #fff; }
 #prestige:hover { transform: scale(1.05); background-color: #e74c3c; color: #fff; }
+.shop-item:hover { transform: scale(1.05); background-color: #f39c12; color: #fff; }
 .floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; pointer-events: none; }
 @keyframes floatUp { 0% { opacity: 1; transform: translateY(0px) scale(1); } 100% { opacity: 0; transform: translateY(-80px) scale(1.3); } }
 .progress-bar { height: 15px; width: 300px; background-color: #ddd; margin: 10px auto; border-radius: 8px; overflow: hidden; }
@@ -55,7 +56,14 @@ h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff
 </div>
 
 <div class="section">
-<button id="prestige">Prestige (Reset for x2 Bonus)</button>
+<h2>Treat Shop (Cosmetics)</h2>
+<button class="shop-item" id="bg1">Pink Background – 500 Treats</button>
+<button class="shop-item" id="bg2">Green Background – 2000 Treats</button>
+<button class="shop-item" id="bg3">Blue Background – 5000 Treats</button>
+</div>
+
+<div class="section">
+<button id="prestige">Prestige (Requires 10000 Treats)</button>
 </div>
 
 <audio id="clickSound" src="https://freesound.org/data/previews/256/256113_3263906-lq.mp3"></audio>
@@ -68,6 +76,8 @@ let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0;
 let upgradeCounts={bellyRubs:0, walkies:0, goldenBone:0};
 let farmCounts={squirrel:0, grandma:0, army:0};
 let timePlayed=0, hiddenProgress=0, prestigeMultiplier=1;
+let unlockedBackgrounds = new Set();
+let prestigeRequirement = 10000;
 
 const treatDisplay=document.getElementById("treats");
 const goodBoyDisplay=document.getElementById("goodBoys");
@@ -77,6 +87,7 @@ const timeDisplay=document.getElementById("timePlayed");
 const prestigeDisplay=document.getElementById("prestigeBonus");
 const treatButton=document.getElementById("treatButton");
 const autoProgress=document.getElementById("autoProgress");
+const prestigeButton=document.getElementById('prestige');
 
 const clickSound=document.getElementById("clickSound");
 const upgradeSound=document.getElementById("upgradeSound");
@@ -95,7 +106,7 @@ const autoFarms={
   army:{cost:100,rate:20,counterId:'armyCount'}
 };
 
-// SAVE & LOAD
+// --- SAVE & LOAD ---
 function loadGame(){
   const save = JSON.parse(localStorage.getItem('bradySave'));
   if(save){
@@ -107,6 +118,8 @@ function loadGame(){
     farmCounts = save.farmCounts || farmCounts;
     timePlayed = save.timePlayed || 0;
     prestigeMultiplier = save.prestigeMultiplier || 1;
+    prestigeRequirement = save.prestigeRequirement || 10000;
+    unlockedBackgrounds = new Set(save.unlockedBackgrounds || []);
     prestigeDisplay.textContent = prestigeMultiplier+'x';
     for(const key in upgrades){
       const btn=document.getElementById(key);
@@ -123,22 +136,49 @@ function loadGame(){
     }
   }
 }
+
 function saveGame(){
-  const save = { treats, goodBoys, treatsPerClick, treatsPerSecond, upgradeCounts, farmCounts, timePlayed, prestigeMultiplier };
+  const save = { treats, goodBoys, treatsPerClick, treatsPerSecond, upgradeCounts, farmCounts, timePlayed, prestigeMultiplier, unlockedBackgrounds:[...unlockedBackgrounds], prestigeRequirement };
   localStorage.setItem('bradySave', JSON.stringify(save));
 }
 
-// CLICK
+// --- GUI UPDATE ---
+function updateStats(){
+  treatDisplay.textContent = Math.floor(treats);
+  goodBoyDisplay.textContent = goodBoys;
+  tpcDisplay.textContent = treatsPerClick * prestigeMultiplier;
+  tpsDisplay.textContent = treatsPerSecond;
+  prestigeDisplay.textContent = prestigeMultiplier+'x';
+  updateBackground();
+}
+
+// --- BACKGROUND CHANGER ---
+function updateBackground(){
+  if(unlockedBackgrounds.has('bg3')) document.body.style.background='linear-gradient(to bottom, #80c0ff, #0080ff)';
+  else if(unlockedBackgrounds.has('bg2')) document.body.style.background='linear-gradient(to bottom, #80ffc0, #00ff80)';
+  else if(unlockedBackgrounds.has('bg1')) document.body.style.background='linear-gradient(to bottom, #ffe1f0, #ff80c0)';
+  else document.body.style.background='linear-gradient(to bottom, #fff5e1, #ffd580)';
+}
+
+// --- CLICK BUTTON ---
 treatButton.addEventListener("click", e=>{
   treats += treatsPerClick * prestigeMultiplier;
   goodBoys = Math.floor(treats/10);
-  createFloating('+🍖',{pageX:e.pageX, pageY:e.pageY});
+
+  const span=document.createElement('span');
+  span.className='floating';
+  span.textContent='+🍖';
+  document.body.appendChild(span);
+  span.style.left=(e.pageX||e.clientX)+'px';
+  span.style.top=(e.pageY||e.clientY)+'px';
+  setTimeout(()=>span.remove(),1000);
+
   clickSound.play();
   updateStats();
   saveGame();
 });
 
-// UPGRADES
+// --- UPGRADES ---
 for(const key in upgrades){
   const btn=document.getElementById(key);
   btn.addEventListener("click",()=>{
@@ -151,39 +191,51 @@ for(const key in upgrades){
       up.bonus = Math.max(1, Math.floor(up.baseBonus * Math.pow(1.2, upgradeCounts[key])));
       btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
       upgradeSound.play();
-      triggerSparkle();
       updateStats();
       saveGame();
     }
   });
 }
 
-// AUTO FARMS
+// --- AUTO FARMS ---
 for(const key in autoFarms){
   const btn=document.getElementById(key);
   btn.addEventListener("click",()=>{
     const farm=autoFarms[key];
     if(goodBoys>=farm.cost){
       goodBoys-=farm.cost;
-      treatsPerSecond += farm.rate * prestigeMultiplier;
+      treatsPerSecond+=farm.rate;
       farmCounts[key]++;
       farm.cost=Math.floor(farm.cost*1.2);
       btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
       upgradeSound.play();
-      triggerSparkle();
       updateStats();
       saveGame();
     }
   });
 }
 
-// HIDDEN & GOLDEN TREATS
+// --- PASSIVE TREATS + HIDDEN TREATS ---
+setInterval(()=>{
+  treats += treatsPerSecond;
+  goodBoys = Math.floor(treats/10);
+  hiddenProgress += 1;
+  autoProgress.style.width = Math.min(hiddenProgress*10,100)+'%';
+  if(hiddenProgress>=10){
+    spawnHiddenTreat(Math.random() < 0.1);
+    hiddenProgress=0;
+  }
+  updateStats();
+  saveGame();
+},1000);
+
+// --- HIDDEN & GOLDEN TREATS ---
 function spawnHiddenTreat(golden=false){
   const treat = document.createElement('div');
-  treat.textContent = '🍖';
+  treat.textContent = golden ? '🍖' : '🍖';
   treat.className = golden ? 'golden-treat' : 'hidden-treat';
-  treat.style.left = Math.random()*(window.innerWidth-50)+'px';
-  treat.style.top = Math.random()*(window.innerHeight-50)+'px';
+  treat.style.left=Math.random()*(window.innerWidth-50)+'px';
+  treat.style.top=Math.random()*(window.innerHeight-50)+'px';
   document.body.appendChild(treat);
   treat.addEventListener('click',()=>{
     const value = golden ? 500*prestigeMultiplier : 50*prestigeMultiplier;
@@ -192,38 +244,14 @@ function spawnHiddenTreat(golden=false){
     createFloating(`+${value}🍖`, {pageX: parseInt(treat.style.left), pageY: parseInt(treat.style.top)});
     (golden?goldenSound:hiddenSound).play();
     treat.remove();
+    if(golden) triggerFireworks();
     updateStats();
     saveGame();
-    if(value>=500) triggerFireworks();
   });
   setTimeout(()=>treat.remove(),5000);
 }
 
-// PASSIVE TREATS + RANDOM EVENTS
-setInterval(()=>{
-  treats += treatsPerSecond;
-  goodBoys = Math.floor(treats/10);
-  hiddenProgress += 1;
-  autoProgress.style.width = Math.min(hiddenProgress*10,100)+'%';
-  if(hiddenProgress>=10){
-    const golden = Math.random() < 0.1;
-    spawnHiddenTreat(golden);
-    hiddenProgress = 0;
-  }
-  updateStats();
-  saveGame();
-},1000);
-
-// TIME
-setInterval(()=>{
-  timePlayed++;
-  let m=Math.floor(timePlayed/60);
-  let s=timePlayed%60;
-  timeDisplay.textContent=`${m}m ${s}s`;
-  saveGame();
-},1000);
-
-// FLOATING
+// --- FLOATING EFFECT ---
 function createFloating(text,e){
   const span=document.createElement('span');
   span.className='floating';
@@ -234,7 +262,7 @@ function createFloating(text,e){
   setTimeout(()=>span.remove(),1000);
 }
 
-// FIREWORKS
+// --- FIREWORKS ---
 function triggerFireworks(){
   for(let i=0;i<20;i++){
     const fw=document.createElement('div');
@@ -250,65 +278,72 @@ function triggerFireworks(){
   }
 }
 
-// PRESTIGE
-document.getElementById('prestige').addEventListener('click',()=>{
-  if(confirm('Are you sure you want to Prestige? All treats and upgrades will reset, but you get +1x multiplier!')){
+// --- TIME PLAYED ---
+setInterval(()=>{
+  timePlayed++;
+  let m=Math.floor(timePlayed/60);
+  let s=timePlayed%60;
+  timeDisplay.textContent=`${m}m ${s}s`;
+},1000);
+
+// --- PRESTIGE SYSTEM ---
+prestigeButton.disabled = true;
+prestigeButton.style.opacity = 0.5;
+
+setInterval(()=>{
+  if(treats >= prestigeRequirement){
+    prestigeButton.disabled = false;
+    prestigeButton.style.opacity = 1;
+    prestigeButton.textContent = `Prestige (Reset for +1x Bonus)`;
+  } else {
+    prestigeButton.disabled = true;
+    prestigeButton.style.opacity = 0.5;
+    prestigeButton.textContent = `Prestige (Requires ${prestigeRequirement} Treats)`;
+  }
+},500);
+
+prestigeButton.addEventListener('click', ()=>{
+  if(treats >= prestigeRequirement && confirm('Prestige? All treats/upgrades reset, +1x multiplier!')){
     treats=0; goodBoys=0; treatsPerClick=1; treatsPerSecond=0;
     upgradeCounts={bellyRubs:0, walkies:0, goldenBone:0};
     farmCounts={squirrel:0, grandma:0, army:0};
     timePlayed=0;
     prestigeMultiplier++;
+    prestigeRequirement *= 2;
     prestigeDisplay.textContent = prestigeMultiplier+'x';
+    // Reset upgrade buttons
     for(const key in upgrades){
       const btn=document.getElementById(key);
       const up=upgrades[key];
-      up.bonus=up.baseBonus; up.cost=10; btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: 0)`;
+      up.bonus = up.baseBonus; up.cost = 10;
+      btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: 0)`;
     }
     for(const key in autoFarms){
       const btn=document.getElementById(key);
       const farm=autoFarms[key];
-      farm.cost = 5; btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: 0)`;
+      farm.cost = 5;
+      btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: 0)`;
     }
     saveGame();
     updateStats();
   }
 });
 
-// BACKGROUND CHANGER
-function updateBackground(){
-  if(treats>=10000) document.body.style.background='linear-gradient(to bottom, #ffe1f0, #ff80c0)';
-  else if(treats>=5000) document.body.style.background='linear-gradient(to bottom, #e1fff5, #80ffcc)';
-  else document.body.style.background='linear-gradient(to bottom, #fff5e1, #ffd580)';
-}
+// --- TREAT SHOP ---
+document.getElementById('bg1').addEventListener('click', ()=>{
+  if(treats>=500){ treats-=500; unlockedBackgrounds.add('bg1'); saveGame(); updateStats(); }
+});
+document.getElementById('bg2').addEventListener('click', ()=>{
+  if(treats>=2000){ treats-=2000; unlockedBackgrounds.add('bg2'); saveGame(); updateStats(); }
+});
+document.getElementById('bg3').addEventListener('click', ()=>{
+  if(treats>=5000){ treats-=5000; unlockedBackgrounds.add('bg3'); saveGame(); updateStats(); }
+});
 
-// UPDATE STATS
-function updateStats(){
-  treatDisplay.textContent = Math.floor(treats);
-  goodBoyDisplay.textContent = goodBoys;
-  tpcDisplay.textContent = treatsPerClick * prestigeMultiplier;
-  tpsDisplay.textContent = treatsPerSecond;
-  updateBackground();
-}
-
-// SPARKLE ON UPGRADE
-function triggerSparkle(){
-  for(let i=0;i<5;i++){
-    const s=document.createElement('div');
-    s.className='firework';
-    const x=(Math.random()*100-50)+'px';
-    const y=(Math.random()*100-50)+'px';
-    s.style.setProperty('--x',x);
-    s.style.setProperty('--y',y);
-    s.style.left = window.innerWidth/2+'px';
-    s.style.top = window.innerHeight/2+'px';
-    document.body.appendChild(s);
-    setTimeout(()=>s.remove(),600);
-  }
-}
-
-// INIT
+// --- INIT ---
 loadGame();
 updateStats();
 </script>
+
 </body>
 </html>
