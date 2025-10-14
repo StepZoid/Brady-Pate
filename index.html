@@ -2,166 +2,183 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Brady’s World 🐶</title>
+<title>Brady Pate: The Goodest Boy</title>
 <style>
-body { font-family: 'Comic Sans MS', cursive; text-align: center; background: #fff5e1; color: #333; overflow-x: hidden; }
-h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; }
-button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; background-color: #8bc34a; cursor: pointer; }
-#treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background-color: #ffcc00; border: none; border-radius: 12px; cursor: pointer; position: relative; }
+body { font-family: 'Comic Sans MS', cursive; text-align: center; background: linear-gradient(to bottom, #fff5e1, #ffd580); color: #333; overflow-x: hidden; }
+h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff; }
 #stats { margin: 20px; font-size: 1.5em; }
+#treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background: radial-gradient(circle, #ffec3d, #ffcc00); border: none; border-radius: 12px; cursor: pointer; position: relative; transition: transform 0.2s, box-shadow 0.2s; }
+#treatButton:hover { transform: scale(1.1); box-shadow: 0 0 20px #ffdd00; }
 .section { margin-top: 30px; }
-.upgrade, .autofarm { margin: 10px auto; padding: 10px 20px; font-size: 1.1em; background-color: #8bc34a; border: none; border-radius: 8px; cursor: pointer; display: block; width: 350px; }
-.floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; }
-@keyframes floatUp { 0% { opacity: 1; transform: translateY(0px); } 100% { opacity: 0; transform: translateY(-50px); } }
+.upgrade, .autofarm { margin: 10px auto; padding: 12px 24px; font-size: 1.1em; border: none; border-radius: 8px; cursor: pointer; display: block; width: 360px; transition: transform 0.2s, background 0.2s; }
+.upgrade:hover { transform: scale(1.05); background-color: #7ac142; }
+.autofarm:hover { transform: scale(1.05); background-color: #4a90e2; color: #fff; }
+.floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; pointer-events: none; }
+@keyframes floatUp { 0% { opacity: 1; transform: translateY(0px) scale(1); } 100% { opacity: 0; transform: translateY(-80px) scale(1.3); } }
+.progress-bar { height: 15px; width: 300px; background-color: #ddd; margin: 10px auto; border-radius: 8px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background-color: #ffcc00; transition: width 0.2s; }
+.hidden-treat { position: absolute; font-size: 24px; cursor: pointer; user-select: none; transition: transform 0.2s; }
+.hidden-treat:hover { transform: scale(1.5); }
 </style>
 </head>
 <body>
 
-<h1>Welcome to Brady’s World 🐾</h1>
-<div id="stats">
+<h1>Brady’s World 🐶</h1>
+<p id="stats">
 🦴 Treats: <span id="treats">0</span><br>
 ⭐ Good Boys: <span id="goodBoys">0</span><br>
 🐶 Treats per click: <span id="tpc">1</span><br>
 ⚙️ Auto Treats/sec: <span id="tps">0</span><br>
-⏱️ Time Played: <span id="timePlayed">0</span> sec
-</div>
+⏱️ Time Played: <span id="timePlayed">0s</span>
+</p>
 
 <button id="treatButton">Give Brady a Treat 🍖</button>
 
 <div class="section">
-<h2>Upgrades</h2>
+<h2>Upgrades (Treats)</h2>
 <button class="upgrade" id="bellyRubs">Belly Rubs (+1/click) – 10 Treats (Owned: <span id="bellyCount">0</span>)</button>
 <button class="upgrade" id="walkies">Walkies (+5/click) – 50 Treats (Owned: <span id="walkiesCount">0</span>)</button>
 <button class="upgrade" id="goldenBone">Golden Bone (+100/click) – 500 Treats (Owned: <span id="goldenCount">0</span>)</button>
 </div>
 
 <div class="section">
-<h2>Auto Farms</h2>
+<h2>Auto Farm (Good Boys)</h2>
 <button class="autofarm" id="squirrel">Squirrel Scout (+1/sec) – 5 Good Boys (Owned: <span id="squirrelCount">0</span>)</button>
 <button class="autofarm" id="grandma">Grandma (+5/sec) – 20 Good Boys (Owned: <span id="grandmaCount">0</span>)</button>
 <button class="autofarm" id="army">Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
+<div class="progress-bar"><div class="progress-fill" id="autoProgress"></div></div>
 </div>
 
+<audio id="clickSound" src="https://freesound.org/data/previews/256/256113_3263906-lq.mp3"></audio>
+<audio id="upgradeSound" src="https://freesound.org/data/previews/256/256119_3263906-lq.mp3"></audio>
+<audio id="hiddenSound" src="https://freesound.org/data/previews/256/256120_3263906-lq.mp3"></audio>
+
 <script>
-let treats = 0, goodBoys = 0, treatsPerClick = 1, treatsPerSecond = 0, timePlayed = 0;
-let upgradeCounts = { bellyRubs:0, walkies:0, goldenBone:0 };
-let farmCounts = { squirrel:0, grandma:0, army:0 };
+let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0;
+let upgradeCounts={bellyRubs:0, walkies:0, goldenBone:0};
+let farmCounts={squirrel:0, grandma:0, army:0};
+let timePlayed=0, hiddenProgress=0;
 
-// Load progress from localStorage
-function loadProgress() {
-  const saved = localStorage.getItem('bradyGame');
-  if (saved) {
-    const data = JSON.parse(saved);
-    treats = data.treats || 0;
-    goodBoys = data.goodBoys || 0;
-    treatsPerClick = data.treatsPerClick || 1;
-    treatsPerSecond = data.treatsPerSecond || 0;
-    timePlayed = data.timePlayed || 0;
-    upgradeCounts = data.upgradeCounts || upgradeCounts;
-    farmCounts = data.farmCounts || farmCounts;
-    for (let key in upgrades) {
-      document.getElementById(upgrades[key].counterId).textContent = upgradeCounts[key];
-      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1')} (+${upgrades[key].bonus}/click) – ${upgrades[key].cost} Treats (Owned: ${upgradeCounts[key]})`;
-    }
-    for (let key in autoFarms) {
-      document.getElementById(autoFarms[key].counterId).textContent = farmCounts[key];
-      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1')} (+${autoFarms[key].rate}/sec) – ${autoFarms[key].cost} Good Boys (Owned: ${farmCounts[key]})`;
-    }
-    updateStats();
-  }
-}
+const treatDisplay=document.getElementById("treats");
+const goodBoyDisplay=document.getElementById("goodBoys");
+const tpcDisplay=document.getElementById("tpc");
+const tpsDisplay=document.getElementById("tps");
+const timeDisplay=document.getElementById("timePlayed");
+const treatButton=document.getElementById("treatButton");
+const autoProgress=document.getElementById("autoProgress");
 
-// Save progress
-function saveProgress() {
-  localStorage.setItem('bradyGame', JSON.stringify({
-    treats, goodBoys, treatsPerClick, treatsPerSecond, timePlayed, upgradeCounts, farmCounts
-  }));
-}
+const clickSound=document.getElementById("clickSound");
+const upgradeSound=document.getElementById("upgradeSound");
+const hiddenSound=document.getElementById("hiddenSound");
 
-const upgrades = {
-  bellyRubs: { cost: 10, bonus: 1, counterId: 'bellyCount' },
-  walkies: { cost: 50, bonus: 5, counterId: 'walkiesCount' },
-  goldenBone: { cost: 500, bonus: 100, counterId: 'goldenCount' }
+const upgrades={
+  bellyRubs:{cost:10,bonus:1,baseBonus:1,counterId:'bellyCount'},
+  walkies:{cost:50,bonus:5,baseBonus:5,counterId:'walkiesCount'},
+  goldenBone:{cost:500,bonus:100,baseBonus:100,counterId:'goldenCount'}
 };
 
-const autoFarms = {
-  squirrel: { cost: 5, rate: 1, counterId: 'squirrelCount' },
-  grandma: { cost: 20, rate: 5, counterId: 'grandmaCount' },
-  army: { cost: 100, rate: 20, counterId: 'armyCount' }
+const autoFarms={
+  squirrel:{cost:5,rate:1,counterId:'squirrelCount'},
+  grandma:{cost:20,rate:5,counterId:'grandmaCount'},
+  army:{cost:100,rate:20,counterId:'armyCount'}
 };
 
-const treatButton = document.getElementById('treatButton');
-treatButton.addEventListener('click', () => {
+// CLICK BUTTON
+treatButton.addEventListener("click", e=>{
   treats += treatsPerClick;
-  goodBoys = Math.floor(treats / 10);
-  createFloating('+🍖');
+  goodBoys = Math.floor(treats/10);
+
+  // Floating animation
+  const span=document.createElement('span');
+  span.className='floating';
+  span.textContent='+🍖';
+  document.body.appendChild(span);
+  span.style.left=(e.pageX||e.clientX)+'px';
+  span.style.top=(e.pageY||e.clientY)+'px';
+  setTimeout(()=>span.remove(),1000);
+
+  clickSound.play();
   updateStats();
-  saveProgress();
 });
 
-// Floating animation
-function createFloating(text){
-  const span = document.createElement('span');
-  span.className = 'floating';
-  span.textContent = text;
-  span.style.left = Math.random()*window.innerWidth + 'px';
-  span.style.top = Math.random()*window.innerHeight + 'px';
-  document.body.appendChild(span);
-  setTimeout(()=>span.remove(),1000);
-}
-
-// Upgrades
-for (const key in upgrades){
-  document.getElementById(key).addEventListener('click', () => {
-    const up = upgrades[key];
-    if (treats >= up.cost){
-      treats -= up.cost;
+// UPGRADES
+for(const key in upgrades){
+  const btn=document.getElementById(key);
+  btn.addEventListener("click",()=>{
+    const up=upgrades[key];
+    if(treats>=up.cost){
+      treats-=up.cost;
       treatsPerClick += up.bonus;
       upgradeCounts[key]++;
-      up.cost = Math.floor(up.cost*1.2);
-      document.getElementById(up.counterId).textContent = upgradeCounts[key];
-      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1')} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
+      up.cost = Math.floor(up.cost * 1.2);
+      up.bonus = Math.max(1, Math.floor(up.baseBonus * Math.pow(1.2, upgradeCounts[key])));
+      btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
+      upgradeSound.play();
       updateStats();
-      saveProgress();
     }
   });
 }
 
-// Auto farms
-for (const key in autoFarms){
-  document.getElementById(key).addEventListener('click', () => {
-    const farm = autoFarms[key];
-    if (goodBoys >= farm.cost){
-      goodBoys -= farm.cost;
-      treatsPerSecond += farm.rate;
+// AUTO FARMS
+for(const key in autoFarms){
+  const btn=document.getElementById(key);
+  btn.addEventListener("click",()=>{
+    const farm=autoFarms[key];
+    if(goodBoys>=farm.cost){
+      goodBoys-=farm.cost;
+      treatsPerSecond+=farm.rate;
       farmCounts[key]++;
-      farm.cost = Math.floor(farm.cost*1.2);
-      document.getElementById(farm.counterId).textContent = farmCounts[key];
-      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1')} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
+      farm.cost=Math.floor(farm.cost*1.2);
+      btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
+      upgradeSound.play();
       updateStats();
-      saveProgress();
     }
   });
 }
 
-// Passive treats & time played
+// PASSIVE TREATS + HIDDEN TREATS
 setInterval(()=>{
   treats += treatsPerSecond;
   goodBoys = Math.floor(treats/10);
-  timePlayed++;
+  hiddenProgress += 1;
+  autoProgress.style.width = Math.min(hiddenProgress*10,100)+'%';
+  if(hiddenProgress>=10){ spawnHiddenTreat(); hiddenProgress=0; }
   updateStats();
-  saveProgress();
+},1000);
+
+// HIDDEN TREATS
+function spawnHiddenTreat(){
+  const hidden=document.createElement('div');
+  hidden.textContent='🍖';
+  hidden.className='hidden-treat';
+  hidden.style.left=Math.random()*(window.innerWidth-30)+'px';
+  hidden.style.top=Math.random()*(window.innerHeight-30)+'px';
+  document.body.appendChild(hidden);
+  hidden.addEventListener('click',()=>{
+    treats += 50;
+    goodBoys = Math.floor(treats/10);
+    createFloating('+50🍖',{pageX:parseInt(hidden.style.left), pageY:parseInt(hidden.style.top)});
+    hiddenSound.play();
+    hidden.remove();
+    updateStats();
+  });
+  setTimeout(()=>hidden.remove(),5000);
+}
+
+// TIME PLAYED
+setInterval(()=>{
+  timePlayed++;
+  let m=Math.floor(timePlayed/60);
+  let s=timePlayed%60;
+  timeDisplay.textContent=`${m}m ${s}s`;
 },1000);
 
 function updateStats(){
-  document.getElementById('treats').textContent = Math.floor(treats);
-  document.getElementById('goodBoys').textContent = goodBoys;
-  document.getElementById('tpc').textContent = treatsPerClick;
-  document.getElementById('tps').textContent = treatsPerSecond;
-  document.getElementById('timePlayed').textContent = timePlayed;
+  treatDisplay.textContent = Math.floor(treats);
+  goodBoyDisplay.textContent = goodBoys;
+  tpcDisplay.textContent = treatsPerClick;
+  tpsDisplay.textContent = treatsPerSecond;
 }
-
-loadProgress();
 </script>
 </body>
 </html>
