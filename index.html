@@ -11,18 +11,12 @@ button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; 
 #game { display: none; }
 #treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background-color: #ffcc00; border: none; border-radius: 12px; cursor: pointer; position: relative; }
 #stats { margin: 20px; font-size: 1.5em; }
-.section { margin-top: 30px; }
-.upgrade, .autofarm { margin: 10px auto; padding: 10px 20px; font-size: 1.1em; background-color: #8bc34a; border: none; border-radius: 8px; cursor: pointer; display: block; width: 350px; }
 .floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; }
 @keyframes floatUp { 0% { opacity: 1; transform: translateY(0px); } 100% { opacity: 0; transform: translateY(-50px); } }
 </style>
 
+<!-- Load Supabase first -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
-<script>
-  const SUPABASE_URL = 'https://qhxcadpgcebjllrccrxa.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoeGNhZHBnY2ViamxscmNjcnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NTA3MzEsImV4cCI6MjA3NjAyNjczMX0.L5V3jDumTb6cCrXvVI5d0AI06j2ZORsaW9gbrWsg49c';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-</script>
 </head>
 
 <body>
@@ -38,9 +32,6 @@ button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; 
   <h1>Welcome to Brady’s World 🐾</h1>
   <div id="stats">
     🦴 Treats: <span id="treats">0</span><br>
-    ⭐ Good Boys: <span id="goodBoys">0</span><br>
-    🐶 Treats per click: <span id="tpc">1</span><br>
-    ⚙️ Auto Treats/sec: <span id="tps">0</span><br>
     ⏱️ Time Played: <span id="timePlayed">0</span> sec
   </div>
   <button id="treatButton">Give Brady a Treat 🍖</button>
@@ -48,7 +39,12 @@ button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; 
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('load', () => {
+  // Initialize Supabase AFTER the library loads
+  const SUPABASE_URL = 'https://qhxcadpgcebjllrccrxa.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoeGNhZHBnY2ViamxscmNjcnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NTA3MzEsImV4cCI6MjA3NjAyNjczMX0.L5V3jDumTb6cCrXvVI5d0AI06j2ZORsaW9gbrWsg49c';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const loginScreen = document.getElementById('loginScreen');
   const game = document.getElementById('game');
   const loginBtn = document.getElementById('loginBtn');
@@ -59,15 +55,15 @@ document.addEventListener('DOMContentLoaded', () => {
   let treats = 0;
   let timePlayed = 0;
 
-  async function signUp() {
+  signupBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const { error } = await supabase.auth.signUp({ email, password });
     if (error) alert(error.message);
-    else alert('Account created! Now log in.');
-  }
+    else alert('Sign up successful! Now log in.');
+  });
 
-  async function login() {
+  loginBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -76,30 +72,25 @@ document.addEventListener('DOMContentLoaded', () => {
       loginScreen.style.display = 'none';
       game.style.display = 'block';
     }
-  }
+  });
 
-  async function logout() {
+  logoutBtn.addEventListener('click', async () => {
     await supabase.auth.signOut();
     game.style.display = 'none';
     loginScreen.style.display = 'block';
-  }
+  });
 
-  function giveTreat() {
+  treatButton.addEventListener('click', () => {
     treats++;
     document.getElementById('treats').textContent = treats;
-    const float = document.createElement('div');
-    float.className = 'floating';
-    float.textContent = '+1 🍖';
-    document.body.appendChild(float);
-    float.style.left = `${Math.random() * window.innerWidth}px`;
-    float.style.top = `${Math.random() * window.innerHeight}px`;
-    setTimeout(() => float.remove(), 1000);
-  }
-
-  loginBtn.addEventListener('click', login);
-  signupBtn.addEventListener('click', signUp);
-  logoutBtn.addEventListener('click', logout);
-  treatButton.addEventListener('click', giveTreat);
+    const span = document.createElement('span');
+    span.className = 'floating';
+    span.textContent = '+1 🍖';
+    span.style.left = Math.random() * window.innerWidth + 'px';
+    span.style.top = Math.random() * window.innerHeight + 'px';
+    document.body.appendChild(span);
+    setTimeout(() => span.remove(), 1000);
+  });
 
   setInterval(() => {
     if (game.style.display === 'block') {
