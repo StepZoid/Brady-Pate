@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Brady Pate: The Goodest Boy</title>
 <style>
-body { font-family: 'Comic Sans MS', cursive; text-align: center; background: linear-gradient(to bottom, #fff5e1, #ffd580); color: #333; overflow-x: hidden; }
+body { font-family: 'Comic Sans MS', cursive; text-align: center; background: linear-gradient(to bottom, #fff5e1, #ffd580); color: #333; overflow-x: hidden; transition: background 1s; }
 h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff; }
 #stats { margin: 20px; font-size: 1.5em; }
 #treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background: radial-gradient(circle, #ffec3d, #ffcc00); border: none; border-radius: 12px; cursor: pointer; position: relative; transition: transform 0.2s, box-shadow 0.2s; }
@@ -21,6 +21,8 @@ h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; text-shadow: 2px 2px #fff
 .hidden-treat, .golden-treat { position: absolute; font-size: 24px; cursor: pointer; user-select: none; transition: transform 0.2s; }
 .hidden-treat:hover, .golden-treat:hover { transform: scale(1.5); }
 .golden-treat { font-size: 36px; color: gold; text-shadow: 1px 1px #fff; }
+.firework { position: absolute; width: 5px; height: 5px; background: radial-gradient(circle, yellow, red); border-radius: 50%; pointer-events: none; animation: explode 0.8s forwards; }
+@keyframes explode { 0% {opacity:1; transform: translate(0,0) scale(1);} 100% {opacity:0; transform: translate(var(--x), var(--y)) scale(2);} }
 </style>
 </head>
 <body>
@@ -93,7 +95,7 @@ const autoFarms={
   army:{cost:100,rate:20,counterId:'armyCount'}
 };
 
-// --- SAVE & LOAD ---
+// SAVE & LOAD
 function loadGame(){
   const save = JSON.parse(localStorage.getItem('bradySave'));
   if(save){
@@ -106,7 +108,6 @@ function loadGame(){
     timePlayed = save.timePlayed || 0;
     prestigeMultiplier = save.prestigeMultiplier || 1;
     prestigeDisplay.textContent = prestigeMultiplier+'x';
-    // Restore upgrades
     for(const key in upgrades){
       const btn=document.getElementById(key);
       const up=upgrades[key];
@@ -114,7 +115,6 @@ function loadGame(){
       up.cost = Math.floor(up.cost * Math.pow(1.2, upgradeCounts[key]));
       btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
     }
-    // Restore auto farms
     for(const key in autoFarms){
       const btn=document.getElementById(key);
       const farm=autoFarms[key];
@@ -123,18 +123,15 @@ function loadGame(){
     }
   }
 }
-
 function saveGame(){
-  const save = { treats, goodBoys, treatsPerClick, treatsPerSecond,
-    upgradeCounts, farmCounts, timePlayed, prestigeMultiplier };
+  const save = { treats, goodBoys, treatsPerClick, treatsPerSecond, upgradeCounts, farmCounts, timePlayed, prestigeMultiplier };
   localStorage.setItem('bradySave', JSON.stringify(save));
 }
 
-// CLICK BUTTON
+// CLICK
 treatButton.addEventListener("click", e=>{
   treats += treatsPerClick * prestigeMultiplier;
   goodBoys = Math.floor(treats/10);
-
   createFloating('+🍖',{pageX:e.pageX, pageY:e.pageY});
   clickSound.play();
   updateStats();
@@ -154,6 +151,7 @@ for(const key in upgrades){
       up.bonus = Math.max(1, Math.floor(up.baseBonus * Math.pow(1.2, upgradeCounts[key])));
       btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
       upgradeSound.play();
+      triggerSparkle();
       updateStats();
       saveGame();
     }
@@ -172,6 +170,7 @@ for(const key in autoFarms){
       farm.cost=Math.floor(farm.cost*1.2);
       btn.innerHTML=`${key.replace(/([A-Z])/g,' $1').trim()} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
       upgradeSound.play();
+      triggerSparkle();
       updateStats();
       saveGame();
     }
@@ -195,6 +194,7 @@ function spawnHiddenTreat(golden=false){
     treat.remove();
     updateStats();
     saveGame();
+    if(value>=500) triggerFireworks();
   });
   setTimeout(()=>treat.remove(),5000);
 }
@@ -205,18 +205,16 @@ setInterval(()=>{
   goodBoys = Math.floor(treats/10);
   hiddenProgress += 1;
   autoProgress.style.width = Math.min(hiddenProgress*10,100)+'%';
-
   if(hiddenProgress>=10){
-    const golden = Math.random() < 0.1; // 10% chance golden treat
+    const golden = Math.random() < 0.1;
     spawnHiddenTreat(golden);
     hiddenProgress = 0;
   }
-
   updateStats();
   saveGame();
 },1000);
 
-// TIME PLAYED
+// TIME
 setInterval(()=>{
   timePlayed++;
   let m=Math.floor(timePlayed/60);
@@ -225,7 +223,7 @@ setInterval(()=>{
   saveGame();
 },1000);
 
-// FLOATING NUMBERS
+// FLOATING
 function createFloating(text,e){
   const span=document.createElement('span');
   span.className='floating';
@@ -236,7 +234,23 @@ function createFloating(text,e){
   setTimeout(()=>span.remove(),1000);
 }
 
-// PRESTIGE BUTTON
+// FIREWORKS
+function triggerFireworks(){
+  for(let i=0;i<20;i++){
+    const fw=document.createElement('div');
+    fw.className='firework';
+    const x=(Math.random()*200-100)+'px';
+    const y=(Math.random()*200-100)+'px';
+    fw.style.setProperty('--x',x);
+    fw.style.setProperty('--y',y);
+    fw.style.left = window.innerWidth/2+'px';
+    fw.style.top = window.innerHeight/2+'px';
+    document.body.appendChild(fw);
+    setTimeout(()=>fw.remove(),800);
+  }
+}
+
+// PRESTIGE
 document.getElementById('prestige').addEventListener('click',()=>{
   if(confirm('Are you sure you want to Prestige? All treats and upgrades will reset, but you get +1x multiplier!')){
     treats=0; goodBoys=0; treatsPerClick=1; treatsPerSecond=0;
@@ -245,7 +259,6 @@ document.getElementById('prestige').addEventListener('click',()=>{
     timePlayed=0;
     prestigeMultiplier++;
     prestigeDisplay.textContent = prestigeMultiplier+'x';
-    // Reset buttons
     for(const key in upgrades){
       const btn=document.getElementById(key);
       const up=upgrades[key];
@@ -261,7 +274,39 @@ document.getElementById('prestige').addEventListener('click',()=>{
   }
 });
 
-// --- INIT ---
+// BACKGROUND CHANGER
+function updateBackground(){
+  if(treats>=10000) document.body.style.background='linear-gradient(to bottom, #ffe1f0, #ff80c0)';
+  else if(treats>=5000) document.body.style.background='linear-gradient(to bottom, #e1fff5, #80ffcc)';
+  else document.body.style.background='linear-gradient(to bottom, #fff5e1, #ffd580)';
+}
+
+// UPDATE STATS
+function updateStats(){
+  treatDisplay.textContent = Math.floor(treats);
+  goodBoyDisplay.textContent = goodBoys;
+  tpcDisplay.textContent = treatsPerClick * prestigeMultiplier;
+  tpsDisplay.textContent = treatsPerSecond;
+  updateBackground();
+}
+
+// SPARKLE ON UPGRADE
+function triggerSparkle(){
+  for(let i=0;i<5;i++){
+    const s=document.createElement('div');
+    s.className='firework';
+    const x=(Math.random()*100-50)+'px';
+    const y=(Math.random()*100-50)+'px';
+    s.style.setProperty('--x',x);
+    s.style.setProperty('--y',y);
+    s.style.left = window.innerWidth/2+'px';
+    s.style.top = window.innerHeight/2+'px';
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(),600);
+  }
+}
+
+// INIT
 loadGame();
 updateStats();
 </script>
