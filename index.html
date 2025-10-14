@@ -58,136 +58,161 @@ button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; 
 </div>
 
 <script>
-window.addEventListener('load', () => {
-  const SUPABASE_URL = 'https://qhxcadpgcebjllrccrxa.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoeGNhZHBnY2ViamxscmNjcnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NTA3MzEsImV4cCI6MjA3NjAyNjczMX0.L5V3jDumTb6cCrXvVI5d0AI06j2ZORsaW9gbrWsg49c';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_KEY';
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const loginScreen = document.getElementById('loginScreen');
-  const game = document.getElementById('game');
-  const loginBtn = document.getElementById('loginBtn');
-  const signupBtn = document.getElementById('signupBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const treatButton = document.getElementById('treatButton');
+const loginScreen = document.getElementById('loginScreen');
+const game = document.getElementById('game');
+const signupBtn = document.getElementById('signupBtn');
+const loginBtn = document.getElementById('loginBtn');
+const logoutBtn = document.getElementById('logoutBtn');
+const treatButton = document.getElementById('treatButton');
 
-  let user = null;
-  let treats = 0;
-  let goodBoys = 0;
-  let treatsPerClick = 1;
-  let treatsPerSecond = 0;
-  let timePlayed = 0;
-  let upgradeCounts = { bellyRubs:0, walkies:0, goldenBone:0 };
-  let farmCounts = { squirrel:0, grandma:0, army:0 };
+let user = null;
+let treats = 0, goodBoys = 0, treatsPerClick = 1, treatsPerSecond = 0, timePlayed = 0;
+let upgradeCounts = { bellyRubs:0, walkies:0, goldenBone:0 };
+let farmCounts = { squirrel:0, grandma:0, army:0 };
 
-  const upgrades = {
-    bellyRubs: { cost: 10, bonus: 1, counterId: 'bellyCount' },
-    walkies: { cost: 50, bonus: 5, counterId: 'walkiesCount' },
-    goldenBone: { cost: 500, bonus: 100, counterId: 'goldenCount' }
-  };
+const upgrades = {
+  bellyRubs: { cost: 10, bonus: 1, counterId: 'bellyCount' },
+  walkies: { cost: 50, bonus: 5, counterId: 'walkiesCount' },
+  goldenBone: { cost: 500, bonus: 100, counterId: 'goldenCount' }
+};
 
-  const autoFarms = {
-    squirrel: { cost: 5, rate: 1, counterId: 'squirrelCount' },
-    grandma: { cost: 20, rate: 5, counterId: 'grandmaCount' },
-    army: { cost: 100, rate: 20, counterId: 'armyCount' }
-  };
+const autoFarms = {
+  squirrel: { cost: 5, rate: 1, counterId: 'squirrelCount' },
+  grandma: { cost: 20, rate: 5, counterId: 'grandmaCount' },
+  army: { cost: 100, rate: 20, counterId: 'armyCount' }
+};
 
-  // Sign up
-  signupBtn.addEventListener('click', async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) alert(error.message);
-    else alert('Sign up successful! Now log in.');
-  });
+// Sign up
+signupBtn.addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) alert(error.message);
+  else alert('Sign up successful! Now log in.');
+});
 
-  // Login
-  loginBtn.addEventListener('click', async () => {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) alert(error.message);
-    else {
-      user = data.user;
-      loginScreen.style.display = 'none';
-      game.style.display = 'block';
-      await loadProgress();
-    }
-  });
-
-  logoutBtn.addEventListener('click', async () => {
-    await supabase.auth.signOut();
-    game.style.display = 'none';
-    loginScreen.style.display = 'block';
-  });
-
-  async function saveProgress() {
-    if (!user) return;
-    await supabase.from('players').upsert({
-      id: user.id,
-      game_data: { treats, goodBoys, treatsPerClick, treatsPerSecond, timePlayed, upgradeCounts, farmCounts }
-    });
+// Login
+loginBtn.addEventListener('click', async () => {
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) alert(error.message);
+  else {
+    user = data.user;
+    loginScreen.style.display = 'none';
+    game.style.display = 'block';
+    await loadProgress();
   }
+});
 
-  async function loadProgress() {
-    if (!user) return;
-    const { data } = await supabase.from('players').select('game_data').eq('id', user.id).single();
-    if (data && data.game_data) {
-      const g = data.game_data;
-      treats = g.treats; goodBoys = g.goodBoys;
-      treatsPerClick = g.treatsPerClick; treatsPerSecond = g.treatsPerSecond;
-      upgradeCounts = g.upgradeCounts; farmCounts = g.farmCounts;
-      timePlayed = g.timePlayed || 0;
-    }
+// Logout
+logoutBtn.addEventListener('click', async () => {
+  await supabase.auth.signOut();
+  game.style.display = 'none';
+  loginScreen.style.display = 'block';
+});
+
+// Save progress
+async function saveProgress(){
+  if (!user) return;
+  await supabase.from('players').upsert({
+    id: user.id,
+    game_data: { treats, goodBoys, treatsPerClick, treatsPerSecond, timePlayed, upgradeCounts, farmCounts }
+  });
+}
+
+// Load progress
+async function loadProgress(){
+  if (!user) return;
+  const { data } = await supabase.from('players').select('game_data').eq('id', user.id).single();
+  if (data && data.game_data){
+    const g = data.game_data;
+    treats = g.treats; goodBoys = g.goodBoys;
+    treatsPerClick = g.treatsPerClick; treatsPerSecond = g.treatsPerSecond;
+    upgradeCounts = g.upgradeCounts; farmCounts = g.farmCounts;
+    timePlayed = g.timePlayed || 0;
     updateStats();
   }
+}
 
-  function updateStats(){
-    document.getElementById('treats').textContent = Math.floor(treats);
-    document.getElementById('goodBoys').textContent = goodBoys;
-    document.getElementById('tpc').textContent = treatsPerClick;
-    document.getElementById('tps').textContent = treatsPerSecond;
-    document.getElementById('timePlayed').textContent = timePlayed;
-  }
+// Update stats
+function updateStats(){
+  document.getElementById('treats').textContent = Math.floor(treats);
+  document.getElementById('goodBoys').textContent = goodBoys;
+  document.getElementById('tpc').textContent = treatsPerClick;
+  document.getElementById('tps').textContent = treatsPerSecond;
+  document.getElementById('timePlayed').textContent = timePlayed;
+}
 
-  function createFloating(text){
-    const span = document.createElement('span');
-    span.className='floating';
-    span.textContent=text;
-    span.style.left = Math.random() * window.innerWidth + 'px';
-    span.style.top = Math.random() * window.innerHeight + 'px';
-    document.body.appendChild(span);
-    setTimeout(()=>span.remove(),1000);
-  }
+// Floating animation
+function createFloating(text){
+  const span = document.createElement('span');
+  span.className = 'floating';
+  span.textContent = text;
+  span.style.left = Math.random() * window.innerWidth + 'px';
+  span.style.top = Math.random() * window.innerHeight + 'px';
+  document.body.appendChild(span);
+  setTimeout(()=>span.remove(), 1000);
+}
 
-  treatButton.addEventListener('click', () => {
-    treats += treatsPerClick;
-    goodBoys = Math.floor(treats/10);
-    createFloating('+🍖');
+// Treat button
+treatButton.addEventListener('click', () => {
+  treats += treatsPerClick;
+  goodBoys = Math.floor(treats / 10);
+  createFloating('+🍖');
+  updateStats();
+  saveProgress();
+});
+
+// Upgrades
+for (const key in upgrades){
+  document.getElementById(key).addEventListener('click', () => {
+    const up = upgrades[key];
+    if (treats >= up.cost){
+      treats -= up.cost;
+      treatsPerClick += up.bonus;
+      upgradeCounts[key]++;
+      up.cost = Math.floor(up.cost * 1.2);
+      document.getElementById(up.counterId).textContent = upgradeCounts[key];
+      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1')} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
+      updateStats();
+      saveProgress();
+    }
+  });
+}
+
+// Auto farms
+for (const key in autoFarms){
+  document.getElementById(key).addEventListener('click', () => {
+    const farm = autoFarms[key];
+    if (goodBoys >= farm.cost){
+      goodBoys -= farm.cost;
+      treatsPerSecond += farm.rate;
+      farmCounts[key]++;
+      farm.cost = Math.floor(farm.cost * 1.2);
+      document.getElementById(farm.counterId).textContent = farmCounts[key];
+      document.getElementById(key).textContent = `${key.replace(/([A-Z])/g,' $1')} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
+      updateStats();
+      saveProgress();
+    }
+  });
+}
+
+// Passive treats & time played
+setInterval(() => {
+  if (game.style.display === 'block'){
+    treats += treatsPerSecond;
+    goodBoys = Math.floor(treats / 10);
+    timePlayed++;
     updateStats();
     saveProgress();
-  });
-
-  // Upgrades
-  for (const key in upgrades){
-    document.getElementById(key).addEventListener('click', () => {
-      const up = upgrades[key];
-      if (treats >= up.cost){
-        treats -= up.cost;
-        treatsPerClick += up.bonus;
-        up.cost = Math.floor(up.cost*1.2);
-        upgradeCounts[key]++;
-        document.getElementById(up.counterId).textContent = upgradeCounts[key];
-        updateStats();
-        saveProgress();
-      }
-    });
   }
+}, 1000);
 
-  // Auto farms
-  for (const key in autoFarms){
-    document.getElementById(key).addEventListener('click', () => {
-      const farm = autoFarms[key];
-      if (goodBoys >= farm.cost){
-        goodBoys -= farm.cost;
-        treatsPerSecond += farm.rate;
-        farm.cost = Math.floor(farm.cost
+</script>
+</body>
+</html>
