@@ -11,11 +11,12 @@ button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; 
 #game { display: none; }
 #treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background-color: #ffcc00; border: none; border-radius: 12px; cursor: pointer; position: relative; }
 #stats { margin: 20px; font-size: 1.5em; }
+.section { margin-top: 30px; }
+.upgrade, .autofarm { margin: 10px auto; padding: 10px 20px; font-size: 1.1em; background-color: #8bc34a; border: none; border-radius: 8px; cursor: pointer; display: block; width: 350px; }
 .floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; color: #ff6600; }
 @keyframes floatUp { 0% { opacity: 1; transform: translateY(0px); } 100% { opacity: 0; transform: translateY(-50px); } }
 </style>
 
-<!-- Load Supabase first -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/supabase.min.js"></script>
 </head>
 
@@ -32,15 +33,32 @@ button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; 
   <h1>Welcome to Brady’s World 🐾</h1>
   <div id="stats">
     🦴 Treats: <span id="treats">0</span><br>
+    ⭐ Good Boys: <span id="goodBoys">0</span><br>
+    🐶 Treats per click: <span id="tpc">1</span><br>
+    ⚙️ Auto Treats/sec: <span id="tps">0</span><br>
     ⏱️ Time Played: <span id="timePlayed">0</span> sec
   </div>
   <button id="treatButton">Give Brady a Treat 🍖</button>
+
+  <div class="section">
+    <h2>Upgrades</h2>
+    <button class="upgrade" id="bellyRubs">Belly Rubs (+1/click) – 10 Treats (Owned: <span id="bellyCount">0</span>)</button>
+    <button class="upgrade" id="walkies">Walkies (+5/click) – 50 Treats (Owned: <span id="walkiesCount">0</span>)</button>
+    <button class="upgrade" id="goldenBone">Golden Bone (+100/click) – 500 Treats (Owned: <span id="goldenCount">0</span>)</button>
+  </div>
+
+  <div class="section">
+    <h2>Auto Farms</h2>
+    <button class="autofarm" id="squirrel">Squirrel Scout (+1/sec) – 5 Good Boys (Owned: <span id="squirrelCount">0</span>)</button>
+    <button class="autofarm" id="grandma">Grandma (+5/sec) – 20 Good Boys (Owned: <span id="grandmaCount">0</span>)</button>
+    <button class="autofarm" id="army">Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
+  </div>
+
   <button id="logoutBtn">Logout</button>
 </div>
 
 <script>
 window.addEventListener('load', () => {
-  // Initialize Supabase AFTER the library loads
   const SUPABASE_URL = 'https://qhxcadpgcebjllrccrxa.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFoeGNhZHBnY2ViamxscmNjcnhhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA0NTA3MzEsImV4cCI6MjA3NjAyNjczMX0.L5V3jDumTb6cCrXvVI5d0AI06j2ZORsaW9gbrWsg49c';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -52,9 +70,28 @@ window.addEventListener('load', () => {
   const logoutBtn = document.getElementById('logoutBtn');
   const treatButton = document.getElementById('treatButton');
 
+  let user = null;
   let treats = 0;
+  let goodBoys = 0;
+  let treatsPerClick = 1;
+  let treatsPerSecond = 0;
   let timePlayed = 0;
+  let upgradeCounts = { bellyRubs:0, walkies:0, goldenBone:0 };
+  let farmCounts = { squirrel:0, grandma:0, army:0 };
 
+  const upgrades = {
+    bellyRubs: { cost: 10, bonus: 1, counterId: 'bellyCount' },
+    walkies: { cost: 50, bonus: 5, counterId: 'walkiesCount' },
+    goldenBone: { cost: 500, bonus: 100, counterId: 'goldenCount' }
+  };
+
+  const autoFarms = {
+    squirrel: { cost: 5, rate: 1, counterId: 'squirrelCount' },
+    grandma: { cost: 20, rate: 5, counterId: 'grandmaCount' },
+    army: { cost: 100, rate: 20, counterId: 'armyCount' }
+  };
+
+  // Sign up
   signupBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
@@ -63,14 +100,17 @@ window.addEventListener('load', () => {
     else alert('Sign up successful! Now log in.');
   });
 
+  // Login
   loginBtn.addEventListener('click', async () => {
     const email = document.getElementById('email').value;
     const password = document.getElementById('password').value;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) alert(error.message);
     else {
+      user = data.user;
       loginScreen.style.display = 'none';
       game.style.display = 'block';
+      await loadProgress();
     }
   });
 
@@ -80,25 +120,74 @@ window.addEventListener('load', () => {
     loginScreen.style.display = 'block';
   });
 
-  treatButton.addEventListener('click', () => {
-    treats++;
-    document.getElementById('treats').textContent = treats;
+  async function saveProgress() {
+    if (!user) return;
+    await supabase.from('players').upsert({
+      id: user.id,
+      game_data: { treats, goodBoys, treatsPerClick, treatsPerSecond, timePlayed, upgradeCounts, farmCounts }
+    });
+  }
+
+  async function loadProgress() {
+    if (!user) return;
+    const { data } = await supabase.from('players').select('game_data').eq('id', user.id).single();
+    if (data && data.game_data) {
+      const g = data.game_data;
+      treats = g.treats; goodBoys = g.goodBoys;
+      treatsPerClick = g.treatsPerClick; treatsPerSecond = g.treatsPerSecond;
+      upgradeCounts = g.upgradeCounts; farmCounts = g.farmCounts;
+      timePlayed = g.timePlayed || 0;
+    }
+    updateStats();
+  }
+
+  function updateStats(){
+    document.getElementById('treats').textContent = Math.floor(treats);
+    document.getElementById('goodBoys').textContent = goodBoys;
+    document.getElementById('tpc').textContent = treatsPerClick;
+    document.getElementById('tps').textContent = treatsPerSecond;
+    document.getElementById('timePlayed').textContent = timePlayed;
+  }
+
+  function createFloating(text){
     const span = document.createElement('span');
-    span.className = 'floating';
-    span.textContent = '+1 🍖';
+    span.className='floating';
+    span.textContent=text;
     span.style.left = Math.random() * window.innerWidth + 'px';
     span.style.top = Math.random() * window.innerHeight + 'px';
     document.body.appendChild(span);
-    setTimeout(() => span.remove(), 1000);
+    setTimeout(()=>span.remove(),1000);
+  }
+
+  treatButton.addEventListener('click', () => {
+    treats += treatsPerClick;
+    goodBoys = Math.floor(treats/10);
+    createFloating('+🍖');
+    updateStats();
+    saveProgress();
   });
 
-  setInterval(() => {
-    if (game.style.display === 'block') {
-      timePlayed++;
-      document.getElementById('timePlayed').textContent = timePlayed;
-    }
-  }, 1000);
-});
-</script>
-</body>
-</html>
+  // Upgrades
+  for (const key in upgrades){
+    document.getElementById(key).addEventListener('click', () => {
+      const up = upgrades[key];
+      if (treats >= up.cost){
+        treats -= up.cost;
+        treatsPerClick += up.bonus;
+        up.cost = Math.floor(up.cost*1.2);
+        upgradeCounts[key]++;
+        document.getElementById(up.counterId).textContent = upgradeCounts[key];
+        updateStats();
+        saveProgress();
+      }
+    });
+  }
+
+  // Auto farms
+  for (const key in autoFarms){
+    document.getElementById(key).addEventListener('click', () => {
+      const farm = autoFarms[key];
+      if (goodBoys >= farm.cost){
+        goodBoys -= farm.cost;
+        treatsPerSecond += farm.rate;
+        farm.cost = Math.floor(farm.cost
