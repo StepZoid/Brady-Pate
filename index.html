@@ -21,12 +21,13 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1;}100%{transform:translateY(100px) rotate(360deg);opacity:0;}}
 #achievements{position:fixed;top:10px;right:10px;background:#fff5e1;padding:10px;border-radius:10px;max-width:200px;text-align:left;box-shadow:0 0 10px rgba(0,0,0,0.2);}
 .achieved{color:green;font-weight:bold;}
+.seasonal{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0;}
 </style>
 </head>
 <body>
 
 <h1>Welcome to Brady’s Ultimate World 🐾</h1>
-<img id="bradyImage" src="brady.png" alt="Brady">
+<img id="bradyImage" src="brady_happy.png" alt="Brady">
 
 <div id="stats">
 🦴 Treats: <span id="treats">0</span><br>
@@ -66,13 +67,15 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 <li id="ach3">Find 5 hidden treats</li>
 <li id="ach4">Unlock a helper pet</li>
 <li id="ach5">Catch 5 dynamic events</li>
+<li id="ach6">Play 10 minutes</li>
 </ul>
 </div>
 
+<canvas class="seasonal" id="seasonalCanvas"></canvas>
+
 <script>
 let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0, timePlayed=0, clickStreak=0, hiddenFound=0, upgradeBought=0;
-let petsOwned={puppy:0,kitten:0};
-let eventCaught=0;
+let petsOwned={puppy:0,kitten:0}; let eventCaught=0;
 
 // Sounds
 const clickSound=new Audio('https://www.myinstants.com/media/sounds/pop.mp3');
@@ -92,7 +95,7 @@ grandma:{cost:20,rate:5,counterId:'grandmaCount'},
 army:{cost:100,rate:20,counterId:'armyCount'}
 };
 
-// Save/Load
+// Load/Save
 function saveProgress(){ localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,clickStreak,hiddenFound,upgradeBought,upgrades,autoFarms,petsOwned,eventCaught})); }
 function loadProgress(){
   const saved=localStorage.getItem('bradyGame');
@@ -123,6 +126,8 @@ function loadProgress(){
   }
   updateStats();
 }
+
+// Stats
 function updateStats(){
   document.getElementById('treats').textContent=Math.floor(treats);
   document.getElementById('goodBoys').textContent=goodBoys;
@@ -132,164 +137,94 @@ function updateStats(){
   checkAchievements();
 }
 
-// Floating animation
-function createFloating(text,x,y){
-  const span=document.createElement('span');
-  span.className='floating';
-  span.textContent=text;
-  span.style.left=x+'px';
-  span.style.top=y+'px';
-  document.body.appendChild(span);
-  setTimeout(()=>span.remove(),1000);
-}
-
+// Floating
+function createFloating(text,x,y){ const span=document.createElement('span'); span.className='floating'; span.textContent=text; span.style.left=x+'px'; span.style.top=y+'px'; document.body.appendChild(span); setTimeout(()=>span.remove(),1000); }
 // Confetti
-function burstConfetti(){
-  for(let i=0;i<20;i++){
-    const c=document.createElement('div');
-    c.className='confetti';
-    c.style.left=Math.random()*window.innerWidth+'px';
-    c.style.background=`hsl(${Math.random()*360},100%,50%)`;
-    document.body.appendChild(c);
-    setTimeout(()=>c.remove(),1000);
-  }
-}
+function burstConfetti(){ for(let i=0;i<20;i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=Math.random()*window.innerWidth+'px'; c.style.background=`hsl(${Math.random()*360},100%,50%)`; document.body.appendChild(c); setTimeout(()=>c.remove(),1000); }}
 
-// Click treat
+// Treat click
 document.getElementById('treatButton').addEventListener('click',e=>{
   let bonus=treatsPerClick;
-  if(Math.random()<0.1){ bonus*=5; critSound.play(); burstConfetti(); }
+  if(Math.random()<0.1){ bonus*=5; critSound.play(); burstConfetti();}
   treats+=bonus;
   goodBoys=Math.floor(treats/10);
   clickStreak++;
   createFloating('🍖',e.pageX,e.pageY);
   if(clickStreak%10===0) burstConfetti();
-  updateStats();
-  clickSound.play();
-  saveProgress();
+  updateStats(); clickSound.play(); saveProgress();
 });
 
-// Click Brady image bonus
+// Brady image click
+const bradyImages=['brady_happy.png','brady_excited.png','brady_tongue.png'];
 document.getElementById('bradyImage').addEventListener('click',()=>{
-  treats+=5;
-  goodBoys=Math.floor(treats/10);
+  treats+=5; goodBoys=Math.floor(treats/10);
+  const img=document.getElementById('bradyImage'); img.src=bradyImages[Math.floor(Math.random()*bradyImages.length)];
   createFloating('✨',Math.random()*window.innerWidth,Math.random()*window.innerHeight);
-  updateStats();
-  clickSound.play();
-  saveProgress();
+  updateStats(); clickSound.play(); saveProgress();
 });
 
-// Upgrades
+// Upgrades & scaling
 for(const key in upgrades){
   upgrades[key].owned=0;
   document.getElementById(key).addEventListener('click',()=>{
     const up=upgrades[key];
     if(treats>=up.cost){
-      treats-=up.cost;
-      treatsPerClick+=up.bonus;
-      up.owned++;
-      upgradeBought++;
+      treats-=up.cost; treatsPerClick+=up.bonus; up.owned++; upgradeBought++;
       up.cost=Math.floor(up.cost*1.2);
       document.getElementById(up.counterId).textContent=up.owned;
       document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${up.owned})`;
-      upgradeSound.play();
-      burstConfetti();
-      updateStats();
-      saveProgress();
+      upgradeSound.play(); burstConfetti(); updateStats(); saveProgress();
     }
   });
 }
 
-// Auto farms
+// Auto Farms scaling
 for(const key in autoFarms){
   autoFarms[key].owned=0;
   document.getElementById(key).addEventListener('click',()=>{
     const farm=autoFarms[key];
     if(goodBoys>=farm.cost){
-      goodBoys-=farm.cost;
-      treatsPerSecond+=farm.rate;
-      farm.owned++;
+      goodBoys-=farm.cost; treatsPerSecond+=farm.rate; farm.owned++;
       farm.cost=Math.floor(farm.cost*1.2);
       document.getElementById(farm.counterId).textContent=farm.owned;
       document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farm.owned})`;
-      upgradeSound.play();
-      updateStats();
-      saveProgress();
+      upgradeSound.play(); updateStats(); saveProgress();
     }
   });
 }
 
 // Pets
-document.getElementById('puppy').addEventListener('click',()=>{
-  if(treats>=50){ treats-=50; petsOwned.puppy++; treatsPerSecond+=2; updateStats(); upgradeSound.play(); saveProgress();}
-});
-document.getElementById('kitten').addEventListener('click',()=>{
-  if(treats>=200){ treats-=200; petsOwned.kitten++; treatsPerSecond+=5; updateStats(); upgradeSound.play(); saveProgress();}
-});
+document.getElementById('puppy').addEventListener('click',()=>{if(treats>=50){treats-=50;petsOwned.puppy++; treatsPerSecond+=2; updateStats(); upgradeSound.play(); saveProgress();}});
+document.getElementById('kitten').addEventListener('click',()=>{if(treats>=200){treats-=200;petsOwned.kitten++; treatsPerSecond+=5; updateStats(); upgradeSound.play(); saveProgress();}});
 
 // Hidden treats
-function spawnHiddenTreat(){
-  const treat=document.createElement('img');
-  treat.src='special_treat.png';
-  treat.className='hiddenTreat';
-  treat.style.left=Math.random()*window.innerWidth+'px';
-  treat.style.top=Math.random()*window.innerHeight+'px';
-  document.body.appendChild(treat);
-  treat.addEventListener('click',()=>{
-    treats+=50;
-    goodBoys=Math.floor(treats/10);
-    hiddenFound++;
-    createFloating('💎',parseInt(treat.style.left),parseInt(treat.style.top));
-    document.body.removeChild(treat);
-    burstConfetti();
-    updateStats();
-    saveProgress();
-  });
-  setTimeout(()=>{ if(treat.parentNode) treat.parentNode.removeChild(treat); },15000);
-}
+function spawnHiddenTreat(){const treat=document.createElement('img'); treat.src='special_treat.png'; treat.className='hiddenTreat'; treat.style.left=Math.random()*window.innerWidth+'px'; treat.style.top=Math.random()*window.innerHeight+'px'; document.body.appendChild(treat); treat.addEventListener('click',()=>{treats+=50; goodBoys=Math.floor(treats/10); hiddenFound++; createFloating('💎',parseInt(treat.style.left),parseInt(treat.style.top)); document.body.removeChild(treat); burstConfetti(); updateStats(); saveProgress();}); setTimeout(()=>{if(treat.parentNode)treat.parentNode.removeChild(treat);},15000);}
 setInterval(spawnHiddenTreat,30000);
 
 // Dynamic events
-function spawnDynamicEvent(){
-  const event=document.createElement('div');
-  event.className='dynamicEvent';
-  event.textContent='Click me fast!';
-  event.style.left=Math.random()*(window.innerWidth-100)+'px';
-  event.style.top=Math.random()*(window.innerHeight-50)+'px';
-  document.body.appendChild(event);
-  event.addEventListener('click',()=>{
-    treats+=100;
-    eventCaught++;
-    createFloating('🎉',parseInt(event.style.left),parseInt(event.style.top));
-    eventSound.play();
-    document.body.removeChild(event);
-    burstConfetti();
-    updateStats();
-    saveProgress();
-  });
-  setTimeout(()=>{ if(event.parentNode) event.parentNode.removeChild(event); },10000);
-}
+function spawnDynamicEvent(){const event=document.createElement('div'); event.className='dynamicEvent'; event.textContent='Click me fast!'; event.style.left=Math.random()*(window.innerWidth-100)+'px'; event.style.top=Math.random()*(window.innerHeight-50)+'px'; document.body.appendChild(event); event.addEventListener('click',()=>{treats+=100; eventCaught++; createFloating('🎉',parseInt(event.style.left),parseInt(event.style.top)); eventSound.play(); document.body.removeChild(event); burstConfetti(); updateStats(); saveProgress();}); setTimeout(()=>{if(event.parentNode) event.parentNode.removeChild(event);},10000);}
 setInterval(spawnDynamicEvent,60000);
 
 // Passive income & time
-setInterval(()=>{
-  treats+=treatsPerSecond;
-  goodBoys=Math.floor(treats/10);
-  timePlayed++;
-  updateStats();
-  saveProgress();
-},1000);
+setInterval(()=>{ treats+=treatsPerSecond; goodBoys=Math.floor(treats/10); timePlayed++; updateStats(); saveProgress(); },1000);
 
 // Achievements
 function checkAchievements(){
   if(treats>=100) document.getElementById('ach1').classList.add('achieved');
   if(upgradeBought>=10) document.getElementById('ach2').classList.add('achieved');
   if(hiddenFound>=5) document.getElementById('ach3').classList.add('achieved');
-  if(petsOwned.puppy>0 || petsOwned.kitten>0) document.getElementById('ach4').classList.add('achieved');
+  if(petsOwned.puppy>0||petsOwned.kitten>0) document.getElementById('ach4').classList.add('achieved');
   if(eventCaught>=5) document.getElementById('ach5').classList.add('achieved');
+  if(timePlayed>=600) document.getElementById('ach6').classList.add('achieved');
 }
 
-// Load progress
+// Seasonal effects (snow example)
+const canvas=document.getElementById('seasonalCanvas'); const ctx=canvas.getContext('2d'); canvas.width=window.innerWidth; canvas.height=window.innerHeight; const snowflakes=[];
+for(let i=0;i<100;i++){snowflakes.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*3+1,d:Math.random()*1});}
+function drawSnow(){ctx.clearRect(0,0,canvas.width,canvas.height); ctx.fillStyle='white'; ctx.beginPath(); for(let i=0;i<snowflakes.length;i++){const f=snowflakes[i]; ctx.moveTo(f.x,f.y); ctx.arc(f.x,f.y,f.r,0,Math.PI*2,true);} ctx.fill(); updateSnow(); requestAnimationFrame(drawSnow);}
+function updateSnow(){for(let i=0;i<snowflakes.length;i++){const f=snowflakes[i]; f.y+=Math.pow(f.d,2)+1; if(f.y>canvas.height){f.y=0; f.x=Math.random()*canvas.width;}}}
+drawSnow();
+
 loadProgress();
 </script>
 </body>
