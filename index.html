@@ -7,8 +7,7 @@
 body {
   font-family: 'Comic Sans MS', cursive;
   text-align: center;
-  background: #fff5e1 url('brady.png') no-repeat center center fixed;
-  background-size: cover;
+  background: #fff5e1;
   color: #333;
   overflow-x: hidden;
   position: relative;
@@ -22,8 +21,7 @@ h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; }
 #battlePassContainer { margin-top:20px; width:90%; height:20px; background:#ccc; border-radius:10px; margin-left:auto; margin-right:auto; position: relative;}
 #battlePassProgress { height:100%; background:#4b2e83; width:0%; border-radius:10px; transition:width 0.3s; position:absolute; left:0; top:0; }
 #battlePassTier { position: relative; z-index:1; margin-top:5px;}
-#miniEvent, #rareEvent { position:absolute; width:50px; height:50px; display:none; cursor:pointer; z-index:1; }
-.hiddenTreat { position:absolute; width:50px; height:50px; cursor:pointer; z-index:1; }
+.hiddenTreat, .miniEvent { position:absolute; width:50px; height:50px; cursor:pointer; z-index:10; display:none; }
 @keyframes floatUp { 0% { opacity:1; transform:translateY(0px); } 100% { opacity:0; transform:translateY(-50px); } }
 </style>
 </head>
@@ -74,16 +72,14 @@ h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; }
 </div>
 
 <img id="miniEvent" src="brady.png">
-<img id="rareEvent" src="brady.png">
-
 </div>
 
 <script>
-let treats=0,goodBoys=0,treatsPerClick=1,treatsPerSecond=0,timePlayed=0;
-let upgradeCounts={bellyRubs:0,walkies:0,goldenBone:0};
-let farmCounts={squirrel:0,grandma:0,army:0};
-let cosmeticCounts={partyHat:0,sunglasses:0,rainbowCape:0};
-let hiddenFound=0,bpXP=0,bpTier=0,bpMaxTier=10,bpXPPerTier=100;
+let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0, timePlayed=0;
+let upgradeCounts={bellyRubs:0, walkies:0, goldenBone:0};
+let farmCounts={squirrel:0, grandma:0, army:0};
+let cosmeticCounts={partyHat:0, sunglasses:0, rainbowCape:0};
+let hiddenFound=0, bpXP=0, bpTier=0, bpMaxTier=10, bpXPPerTier=100;
 let lastDaily=0;
 
 // Sounds
@@ -92,9 +88,9 @@ const upgradeSound=new Audio('https://www.myinstants.com/media/sounds/upgrade.mp
 const eventSound=new Audio('https://www.myinstants.com/media/sounds/level-up.mp3');
 
 // Upgrade/AutoFarm/Cosmetic definitions
-const upgrades={bellyRubs:{cost:10,bonus:1,counterId:'bellyCount'},walkies:{cost:50,bonus:5,counterId:'walkiesCount'},goldenBone:{cost:500,bonus:100,counterId:'goldenCount'}};
-const autoFarms={squirrel:{cost:5,rate:1,counterId:'squirrelCount'},grandma:{cost:20,rate:5,counterId:'grandmaCount'},army:{cost:100,rate:20,counterId:'armyCount'}};
-const cosmetics={partyHat:{cost:200,counterId:'partyHatCount'},sunglasses:{cost:300,counterId:'sunglassesCount'},rainbowCape:{cost:500,counterId:'rainbowCapeCount'}};
+const upgrades={bellyRubs:{cost:10,bonus:1,counterId:'bellyCount'}, walkies:{cost:50,bonus:5,counterId:'walkiesCount'}, goldenBone:{cost:500,bonus:100,counterId:'goldenCount'}};
+const autoFarms={squirrel:{cost:5,rate:1,counterId:'squirrelCount'}, grandma:{cost:20,rate:5,counterId:'grandmaCount'}, army:{cost:100,rate:20,counterId:'armyCount'}};
+const cosmetics={partyHat:{cost:200,counterId:'partyHatCount'}, sunglasses:{cost:300,counterId:'sunglassesCount'}, rainbowCape:{cost:500,counterId:'rainbowCapeCount'}};
 
 // ---------- Save/Load ----------
 function saveProgress(){localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,cosmeticCounts,hiddenFound,bpXP,bpTier,lastDaily}));}
@@ -125,7 +121,7 @@ function updateGUI(){
 // ---------- Clicking ----------
 document.getElementById('treatButton').addEventListener('click',e=>{
   treats+=treatsPerClick; clickSound.play();
-  bpXP+=treatsPerClick; if(bpXP>=bpXPPerTier){bpXP-=bpXPPerTier;bpTier++;eventSound.play();}
+  bpXP+=treatsPerClick; if(bpXP>=bpXPPerTier){bpXP-=bpXPPerTier;bpTier++; eventSound.play();}
   updateGUI(); saveProgress();
 });
 
@@ -160,35 +156,15 @@ setInterval(()=>{
   timePlayed++; updateGUI(); saveProgress();
 },1000);
 
-// ---------- Mini Events ----------
+// ---------- Mini Event ----------
+const miniEvent=document.getElementById('miniEvent');
 function spawnMiniEvent(){
-  let event=document.getElementById('miniEvent');
-  event.style.left=Math.random()*window.innerWidth+'px';
-  event.style.top=Math.random()*window.innerHeight+'px';
-  event.style.display='block';
-  setTimeout(()=>{event.style.display='none'},5000);
+  miniEvent.style.left=Math.random()*(window.innerWidth-50)+'px';
+  miniEvent.style.top=Math.random()*(window.innerHeight-50)+'px';
+  miniEvent.style.display='block';
 }
 setInterval(()=>{if(Math.random()<0.05)spawnMiniEvent();},5000);
-document.getElementById('miniEvent').addEventListener('click',()=>{treats+=50;eventSound.play();updateGUI();saveProgress();});
-
-// ---------- Hidden Treats ----------
-function spawnHiddenTreat(){
-  let treat=document.createElement('img');
-  treat.src='brady.png';
-  treat.className='hiddenTreat';
-  treat.style.left=Math.random()*(window.innerWidth-50)+'px';
-  treat.style.top=Math.random()*(window.innerHeight-50)+'px';
-  document.body.appendChild(treat);
-  treat.addEventListener('click',()=>{treats+=100;hiddenFound++;treat.remove();eventSound.play();updateGUI();saveProgress();});
-  setTimeout(()=>{if(treat.parentElement)treat.remove();},10000);
-}
-setInterval(()=>{if(Math.random()<0.03)spawnHiddenTreat();},7000);
-
-// ---------- Daily Reward ----------
-document.getElementById('dailyRewardBtn').addEventListener('click',()=>{
-  let now=Date.now();
-  if(now-lastDaily>86400000){treats+=500;lastDaily=now;updateGUI();saveProgress();alert('Daily reward claimed!');}else{alert('Come back tomorrow!');}
-});
+miniEvent.addEventListener('click',()=>{treats+=50;eventSound.play();miniEvent.style.display='none';updateGUI();saveProgress();});
 
 // ---------- Load Game ----------
 loadProgress();
