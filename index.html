@@ -1,108 +1,153 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<title>Brady’s World — Ultimate Edition</title>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta charset="UTF-8">
+<title>Brady’s World 🐶</title>
 <style>
-:root{
-  --accent:#ffcc00;
-  --accent-dark:#ffb400;
-  --bg1: linear-gradient(to bottom, #fff5e1, #ffd580);
-  --bg2: linear-gradient(to bottom, #ffe1f0, #ff80c0);
-  --bg3: linear-gradient(to bottom, #e1fff5, #80ffcc);
-  --bg4: linear-gradient(to bottom, #80c0ff, #0080ff);
-  --text:#333;
-}
-html,body{height:100%;margin:0;font-family:"Comic Sans MS",cursive;background:var(--bg1);color:var(--text);transition:background 1s;}
-.wrap{max-width:950px;margin:10px auto;padding:12px;}
-h1{font-size:2.4rem;margin:6px 0;color:#4b2e83;text-shadow:1px 1px #fff}
-#topRow{display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between}
-#stats{font-size:1rem;line-height:1.6; display:flex; flex-wrap:wrap; gap:6px; align-items:center;}
-#stats img{height:28px; vertical-align:middle;}
-#treatButton{font-size:1.3rem;padding:18px 30px;border-radius:12px;border:none;background:radial-gradient(circle,var(--accent),var(--accent-dark));cursor:pointer;box-shadow:0 4px 8px rgba(0,0,0,.12);transition:transform .12s}
-#treatButton:active{transform:scale(.98)}
-.section{margin-top:18px;border-radius:10px;padding:12px;background:rgba(255,255,255,.6);box-shadow:0 6px 16px rgba(0,0,0,.06)}
-.btn{display:block;width:100%;max-width:360px;margin:8px auto;padding:10px;border-radius:8px;border:none;cursor:pointer;transition:all .2s;}
-.btn:hover{transform:scale(1.05);box-shadow:0 6px 12px rgba(0,0,0,.18);}
-.upgrade{background:#dff7d9}
-.autofarm{background:#dfeaff}
-.shop-item{background:#fff0d9}
-#controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.small{font-size:.9rem;padding:8px 10px}
-.floating{position:absolute;animation:floatUp 1s ease-out forwards;font-weight:bold;color:#ff6600;pointer-events:none;z-index:9999}
-@keyframes floatUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-90px) scale(1.25)}}
-.progress-bar{height:12px;width:300px;background:#ddd;border-radius:8px;overflow:hidden;margin:8px auto}
-.progress-fill{height:100%;width:0%;background:var(--accent)}
-.hidden-treat,.golden-treat{position:absolute;cursor:pointer;user-select:none;transition:transform .12s;font-size:24px}
-.golden-treat{font-size:36px;color:gold;text-shadow:1px 1px #fff}
-.firework{position:absolute;width:6px;height:6px;border-radius:50%;pointer-events:none;animation:explode .8s forwards}
-@keyframes explode{0%{opacity:1;transform:translate(0,0) scale(1)}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(2)}}
-.hud{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.save-notice{position:fixed;right:12px;bottom:12px;background:#000;color:#fff;padding:8px 12px;border-radius:8px;opacity:0.0;transition:opacity .4s}
-.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;padding:18px;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.3);z-index:2000;display:none;max-width:90%;width:720px}
-.modal.show{display:block}
-.modal .close{float:right;cursor:pointer;background:#eee;padding:6px;border-radius:6px}
-.tooltip{position:relative}
-.tooltip:hover::after{content:attr(data-tip);position:absolute;left:50%;transform:translateX(-50%);bottom:calc(100% + 8px);background:#222;color:#fff;padding:6px 8px;border-radius:6px;white-space:nowrap;font-size:.85rem}
-.ach-list{display:flex;gap:8px;flex-wrap:wrap}
-.ach{background:#fff;padding:8px;border-radius:8px;min-width:140px;text-align:left}
-.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-footer{margin-top:16px;text-align:center;font-size:.9rem;color:#666}
-input[type="file"]{display:none}
+body { font-family: 'Comic Sans MS', cursive; text-align: center; background: #fff5e1; color: #333; overflow-x: hidden; }
+h1 { font-size: 3em; margin-top: 30px; color: #4b2e83; }
+button { font-size: 1.2em; padding: 8px 16px; border: none; border-radius: 6px; background-color: #8bc34a; cursor: pointer; }
+#bradyImage { width: 150px; margin-top: 20px; border-radius: 12px; cursor: pointer; transition: transform 0.2s; }
+#treatButton { margin-top: 20px; padding: 20px 40px; font-size: 2em; background-color: #ffcc00; border: none; border-radius: 12px; cursor: pointer; position: relative; }
+#stats { margin: 20px; font-size: 1.5em; }
+.section { margin-top: 30px; }
+.upgrade, .autofarm { margin: 10px auto; padding: 10px 20px; font-size: 1.1em; background-color: #8bc34a; border: none; border-radius: 8px; cursor: pointer; display: block; width: 350px; }
+.floating { position: absolute; animation: floatUp 1s ease-out forwards; font-weight: bold; }
+@keyframes floatUp { 0% { opacity: 1; transform: translateY(0px); } 100% { opacity: 0; transform: translateY(-50px); } }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div id="topRow">
-    <h1>Brady’s World — Ultimate Edition <img src="https://drive.google.com/uc?export=view&id=1yxeRCBJkj2aXkhhxNGvrIrgUYtU8rK7P" alt="Brady" style="height:40px;vertical-align:middle;"></h1>
-    <div class="hud">
-      <div id="stats">
-        <img src="https://drive.google.com/uc?export=view&id=1yxeRCBJkj2aXkhhxNGvrIrgUYtU8rK7P"> Treats: <b id="treats">0</b>
-        <img src="https://drive.google.com/uc?export=view&id=1yxeRCBJkj2aXkhhxNGvrIrgUYtU8rK7P"> Good Boys: <b id="goodBoys">0</b><br>
-        TPC: <b id="tpc">1</b> TPS: <b id="tps">0</b> <span id="timePlayed">0s</span><br>
-        Prestige: <b id="prestigeBonus">1x</b> PP: <b id="prestigePoints">0</b>
-      </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end">
-        <div id="controls">
-          <button class="small" id="openStats">Stats</button>
-          <button class="small" id="openAchievements">Achievements</button>
-          <button class="small" id="openSave">Save/Export</button>
-        </div>
-        <div style="margin-top:6px;font-size:.85rem;color:#666;text-align:right">
-          <span id="lastSaved">Last saved: —</span>
-        </div>
-      </div>
-    </div>
-  </div>
 
-  <div style="text-align:center;margin-top:14px">
-    <button id="treatButton" title="Click to give Brady a treat">
-      <img src="https://drive.google.com/uc?export=view&id=1yxeRCBJkj2aXkhhxNGvrIrgUYtU8rK7P" style="height:32px;vertical-align:middle;"> Give Brady a Treat
-    </button>
-  </div>
+<h1>Welcome to Brady’s World 🐾</h1>
+<img id="bradyImage" src="YOUR_IMAGE_URL_HERE" alt="Brady">
 
-  <!-- Upgrades, Auto farms, Shop, Prestige sections remain the same but can include Brady image icons next to text -->
-  <!-- ... rest of your HTML (modals, footer) stays largely the same -->
+<div id="stats">
+🦴 Treats: <span id="treats">0</span><br>
+⭐ Good Boys: <span id="goodBoys">0</span><br>
+🐶 Treats per click: <span id="tpc">1</span><br>
+⚙️ Auto Treats/sec: <span id="tps">0</span><br>
+⏱️ Time Played: <span id="timePlayed">0</span> sec
+</div>
+
+<button id="treatButton">Give Brady a Treat</button>
+
+<div class="section">
+<h2>Upgrades</h2>
+<button class="upgrade" id="bellyRubs">Belly Rubs (+1/click) – 10 Treats (Owned: <span id="bellyCount">0</span>)</button>
+<button class="upgrade" id="walkies">Walkies (+5/click) – 50 Treats (Owned: <span id="walkiesCount">0</span>)</button>
+<button class="upgrade" id="goldenBone">Golden Bone (+100/click) – 500 Treats (Owned: <span id="goldenCount">0</span>)</button>
+</div>
+
+<div class="section">
+<h2>Auto Farms</h2>
+<button class="autofarm" id="squirrel">Squirrel Scout (+1/sec) – 5 Good Boys (Owned: <span id="squirrelCount">0</span>)</button>
+<button class="autofarm" id="grandma">Grandma (+5/sec) – 20 Good Boys (Owned: <span id="grandmaCount">0</span>)</button>
+<button class="autofarm" id="army">Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
 </div>
 
 <script>
-// --- Full game logic remains mostly the same ---
-// Add floating notifications with Brady image where appropriate
-function createFloating(text, ev){
-  const span = document.createElement('span');
-  span.className='floating';
-  span.innerHTML = `<img src="https://drive.google.com/uc?export=view&id=1yxeRCBJkj2aXkhhxNGvrIrgUYtU8rK7P" style="height:24px;vertical-align:middle;"> ${text}`;
-  document.body.appendChild(span);
-  const x = (ev && ev.pageX) ? ev.pageX : (window.innerWidth/2);
-  const y = (ev && ev.pageY) ? ev.pageY : 120;
-  span.style.left = x + 'px';
-  span.style.top = y + 'px';
-  setTimeout(()=>span.remove(),1100);
+let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0, timePlayed=0;
+let upgradeCounts={ bellyRubs:0, walkies:0, goldenBone:0 };
+let farmCounts={ squirrel:0, grandma:0, army:0 };
+
+const upgrades={
+  bellyRubs:{ cost:10, bonus:1, counterId:'bellyCount' },
+  walkies:{ cost:50, bonus:5, counterId:'walkiesCount' },
+  goldenBone:{ cost:500, bonus:100, counterId:'goldenCount' }
+};
+
+const autoFarms={
+  squirrel:{ cost:5, rate:1, counterId:'squirrelCount' },
+  grandma:{ cost:20, rate:5, counterId:'grandmaCount' },
+  army:{ cost:100, rate:20, counterId:'armyCount' }
+};
+
+// Save/Load
+function saveProgress(){ localStorage.setItem('bradyGame', JSON.stringify({treats, goodBoys, treatsPerClick, treatsPerSecond, timePlayed, upgradeCounts, farmCounts})); }
+function loadProgress(){
+  const saved=localStorage.getItem('bradyGame');
+  if(saved){
+    const data=JSON.parse(saved);
+    treats=data.treats||0; goodBoys=data.goodBoys||0; treatsPerClick=data.treatsPerClick||1;
+    treatsPerSecond=data.treatsPerSecond||0; timePlayed=data.timePlayed||0;
+    upgradeCounts=data.upgradeCounts||upgradeCounts; farmCounts=data.farmCounts||farmCounts;
+  }
+  for(const key in upgrades){
+    document.getElementById(upgrades[key].counterId).textContent=upgradeCounts[key];
+    document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${upgrades[key].bonus}/click) – ${upgrades[key].cost} Treats (Owned: ${upgradeCounts[key]})`;
+  }
+  for(const key in autoFarms){
+    document.getElementById(autoFarms[key].counterId).textContent=farmCounts[key];
+    document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${autoFarms[key].rate}/sec) – ${autoFarms[key].cost} Good Boys (Owned: ${farmCounts[key]})`;
+  }
+  updateStats();
 }
 
-// The rest of your JS (upgrades, farms, prestige, shop, save/load, achievements, music) remains as in your original code
-// You can copy the full JS logic from your previous code block and it will now include the Brady image in floating notifications and stats
+function updateStats(){
+  document.getElementById('treats').textContent=Math.floor(treats);
+  document.getElementById('goodBoys').textContent=goodBoys;
+  document.getElementById('tpc').textContent=treatsPerClick;
+  document.getElementById('tps').textContent=treatsPerSecond;
+  document.getElementById('timePlayed').textContent=timePlayed;
+}
+
+function createFloating(){
+  const span=document.createElement('span');
+  span.className='floating';
+  span.innerHTML=`<img src="YOUR_IMAGE_URL_HERE" width="30" />`;
+  span.style.left=Math.random()*window.innerWidth+'px';
+  span.style.top=Math.random()*window.innerHeight+'px';
+  document.body.appendChild(span);
+  setTimeout(()=>span.remove(),1000);
+}
+
+// Treat button
+document.getElementById('treatButton').addEventListener('click', ()=>{
+  treats+=treatsPerClick;
+  goodBoys=Math.floor(treats/10);
+  createFloating();
+  updateStats();
+  saveProgress();
+});
+
+// Upgrades
+for(const key in upgrades){
+  document.getElementById(key).addEventListener('click', ()=>{
+    const up=upgrades[key];
+    if(treats>=up.cost){
+      treats-=up.cost; treatsPerClick+=up.bonus; upgradeCounts[key]++;
+      up.cost=Math.floor(up.cost*1.2);
+      document.getElementById(up.counterId).textContent=upgradeCounts[key];
+      document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${upgradeCounts[key]})`;
+      updateStats(); saveProgress();
+    }
+  });
+}
+
+// Auto farms
+for(const key in autoFarms){
+  document.getElementById(key).addEventListener('click', ()=>{
+    const farm=autoFarms[key];
+    if(goodBoys>=farm.cost){
+      goodBoys-=farm.cost; treatsPerSecond+=farm.rate; farmCounts[key]++;
+      farm.cost=Math.floor(farm.cost*1.2);
+      document.getElementById(farm.counterId).textContent=farmCounts[key];
+      document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farmCounts[key]})`;
+      updateStats(); saveProgress();
+    }
+  });
+}
+
+// Passive income & time
+setInterval(()=>{
+  treats+=treatsPerSecond;
+  goodBoys=Math.floor(treats/10);
+  timePlayed++;
+  updateStats();
+  saveProgress();
+},1000);
+
+loadProgress();
 </script>
 </body>
 </html>
