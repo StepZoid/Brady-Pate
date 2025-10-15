@@ -12,9 +12,13 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 #treatButton{margin-top:20px;padding:20px 40px;font-size:2em;background-color:#ffcc00;border:none;border-radius:12px;cursor:pointer;width:90%;max-width:400px;}
 #stats{margin:20px;font-size:1.5em;}
 .section{margin-top:30px;}
-.upgrade,.autofarm{margin:10px auto;padding:10px 20px;font-size:1.1em;background-color:#8bc34a;border:none;border-radius:8px;cursor:pointer;display:block;width:90%;max-width:400px;}
+.upgrade,.autofarm{margin:10px auto;padding:10px 20px;font-size:1.1em;background-color:#8bc34a;border:none;border-radius:8px;cursor:pointer;display:block;width:90%;max-width:400px;transition:transform 0.2s;}
+.upgrade.purchased,.autofarm.purchased{animation:flash 0.3s;}
+@keyframes flash{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
 .floating{position:absolute;animation:floatUp 1s ease-out forwards;font-weight:bold;}
 .hiddenTreat{position:absolute;cursor:pointer;width:40px;transition:transform 0.2s;}
+#miniEvent{position:absolute;font-size:40px;cursor:pointer;display:none;}
+#tpcImg{width:30px;vertical-align:middle;}
 @keyframes floatUp{0%{opacity:1;transform:translateY(0px);}100%{opacity:0;transform:translateY(-50px);}}
 </style>
 </head>
@@ -26,12 +30,12 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 <div id="stats">
 🦴 Treats: <span id="treats">0</span><br>
 ⭐ Good Boys: <span id="goodBoys">0</span><br>
-🐶 Treats per click: <span id="tpc">1</span><br>
+<img src="brady.png" id="tpcImg" alt="Brady"> Treats per click: <span id="tpc">1</span><br>
 ⚙️ Auto Treats/sec: <span id="tps">0</span><br>
 ⏱️ Time Played: <span id="timePlayed">0</span> sec
 </div>
 
-<button id="treatButton">Give Brady a Treat</button>
+<button id="treatButton">Give Brady a Treat 🍖</button>
 
 <div class="section">
 <h2>Upgrades</h2>
@@ -42,10 +46,12 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 
 <div class="section">
 <h2>Auto Farms</h2>
-<button class="autofarm" id="squirrel">Squirrel Scout (+1/sec) – 5 Good Boys (Owned: <span id="squirrelCount">0</span>)</button>
-<button class="autofarm" id="grandma">Grandma (+5/sec) – 20 Good Boys (Owned: <span id="grandmaCount">0</span>)</button>
-<button class="autofarm" id="army">Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
+<button class="autofarm" id="squirrel">🐿️ Squirrel Scout (+1/sec) – 5 Good Boys (Owned: <span id="squirrelCount">0</span>)</button>
+<button class="autofarm" id="grandma">👵 Grandma (+5/sec) – 20 Good Boys (Owned: <span id="grandmaCount">0</span>)</button>
+<button class="autofarm" id="army">🦮 Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
 </div>
+
+<div id="miniEvent">🌟</div>
 
 <script>
 // Game state
@@ -53,10 +59,12 @@ let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0, timePlayed=0;
 let upgradeCounts={bellyRubs:0,walkies:0,goldenBone:0};
 let farmCounts={squirrel:0,grandma:0,army:0};
 let hiddenFound=0, upgradeBought=0;
+let comboCount=0, lastClick=0;
 
 // Sounds
 const clickSound=new Audio('https://www.myinstants.com/media/sounds/pop.mp3');
 const upgradeSound=new Audio('https://www.myinstants.com/media/sounds/upgrade.mp3');
+const eventSound=new Audio('https://www.myinstants.com/media/sounds/level-up.mp3');
 
 // Upgrades & auto farms
 const upgrades={
@@ -71,7 +79,9 @@ const autoFarms={
 };
 
 // Load/save
-function saveProgress(){ localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,hiddenFound,upgradeBought})); }
+function saveProgress(){ 
+  localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,hiddenFound,upgradeBought,lastDaily:new Date().toDateString()})); 
+}
 function loadProgress(){
   const saved=localStorage.getItem('bradyGame');
   if(saved){
@@ -81,10 +91,14 @@ function loadProgress(){
     treats=data.treats||0; goodBoys=data.goodBoys||0;
     treatsPerClick=data.treatsPerClick||1; treatsPerSecond=data.treatsPerSecond||0;
     timePlayed=data.timePlayed||0; hiddenFound=data.hiddenFound||0; upgradeBought=data.upgradeBought||0;
+    if(data.lastDaily!==new Date().toDateString()){
+      treats+=100; alert("🎉 Daily Treat Bonus! +100 treats");
+    }
   }
   updateGUI();
 }
 
+// GUI updates
 function updateGUI(){
   document.getElementById('treats').textContent=Math.floor(treats);
   document.getElementById('goodBoys').textContent=goodBoys;
@@ -97,15 +111,32 @@ function updateGUI(){
   }
   for(const key in autoFarms){
     document.getElementById(autoFarms[key].counterId).textContent=farmCounts[key];
-    document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${autoFarms[key].rate}/sec) – ${autoFarms[key].cost} Good Boys (Owned: ${farmCounts[key]})`;
+    const emoji = key==='squirrel'?'🐿️':key==='grandma'?'👵':'🦮';
+    document.getElementById(key).textContent=`${emoji} ${key.replace(/([A-Z])/g,' $1')} (+${autoFarms[key].rate}/sec) – ${autoFarms[key].cost} Good Boys (Owned: ${farmCounts[key]})`;
   }
 }
 
+// Floating text
 function createFloating(text,x,y){ const f=document.createElement('span'); f.className='floating'; f.textContent=text; f.style.left=x+'px'; f.style.top=y+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(),1000);}
-function spawnHiddenTreat(){const t=document.createElement('div'); t.className='hiddenTreat'; t.style.left=Math.random()*window.innerWidth+'px'; t.style.top=Math.random()*window.innerHeight+'px'; t.style.background='💎'; document.body.appendChild(t); t.addEventListener('click',()=>{ treats+=50; hiddenFound++; createFloating('💎',parseInt(t.style.left),parseInt(t.style.top)); t.remove(); updateGUI(); saveProgress();}); setTimeout(()=>{if(t.parentNode)t.remove()},15000);}
+
+// Hidden treats
+function spawnHiddenTreat(){const t=document.createElement('div'); t.className='hiddenTreat'; t.style.left=Math.random()*window.innerWidth+'px'; t.style.top=Math.random()*window.innerHeight+'px'; t.style.fontSize='30px'; t.textContent='💎'; document.body.appendChild(t); t.addEventListener('click',()=>{ treats+=50; hiddenFound++; createFloating('💎',parseInt(t.style.left),parseInt(t.style.top)); t.remove(); updateGUI(); saveProgress();}); setTimeout(()=>{if(t.parentNode)t.remove()},15000);}
+
+// Mini event
+function spawnMiniEvent(){
+  const e=document.getElementById('miniEvent');
+  e.style.left=Math.random()*(window.innerWidth-50)+'px';
+  e.style.top=Math.random()*(window.innerHeight-50)+'px';
+  e.style.display='block';
+  e.onclick=()=>{ treats+=50; createFloating('🌟',parseInt(e.style.left),parseInt(e.style.top)); eventSound.play(); e.style.display='none'; updateGUI(); saveProgress(); };
+  setTimeout(()=>{e.style.display='none'},10000);
+}
 
 // Click treat
 document.getElementById('treatButton').addEventListener('click',e=>{
+  const now=Date.now();
+  if(now-lastClick<3000){ comboCount++; if(comboCount>=5){ treats*=2; createFloating('COMBO!',e.pageX,e.pageY); comboCount=0; } } else comboCount=1;
+  lastClick=now;
   treats+=treatsPerClick; goodBoys=Math.floor(treats/10);
   createFloating('🍖',e.pageX,e.pageY); clickSound.play(); updateGUI(); saveProgress();
 });
@@ -122,6 +153,8 @@ for(const key in upgrades){
       treats-=upgrades[key].cost; treatsPerClick+=upgrades[key].bonus;
       upgradeCounts[key]++; upgrades[key].cost=Math.floor(upgrades[key].cost*1.2); upgradeBought++;
       createFloating('⭐',window.innerWidth/2,window.innerHeight/2); upgradeSound.play();
+      document.getElementById(key).classList.add('purchased');
+      setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300);
       updateGUI(); saveProgress();
     }
   });
@@ -134,6 +167,8 @@ for(const key in autoFarms){
       goodBoys-=autoFarms[key].cost; treatsPerSecond+=autoFarms[key].rate;
       farmCounts[key]++; autoFarms[key].cost=Math.floor(autoFarms[key].cost*1.2);
       createFloating('⚙️',window.innerWidth/2,window.innerHeight/2); upgradeSound.play();
+      document.getElementById(key).classList.add('purchased');
+      setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300);
       updateGUI(); saveProgress();
     }
   });
@@ -147,6 +182,7 @@ setInterval(()=>{
 },1000);
 
 setInterval(spawnHiddenTreat,30000);
+setInterval(spawnMiniEvent,20000+Math.random()*20000);
 
 // Initialize
 loadProgress();
