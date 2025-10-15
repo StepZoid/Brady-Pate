@@ -12,14 +12,16 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 #treatButton{margin-top:20px;padding:20px 40px;font-size:2em;background-color:#ffcc00;border:none;border-radius:12px;cursor:pointer;width:90%;max-width:400px;}
 #stats{margin:20px;font-size:1.5em;}
 .section{margin-top:30px;}
-.upgrade,.autofarm,.cosmetic{margin:10px auto;padding:10px 20px;font-size:1.1em;background-color:#8bc34a;border:none;border-radius:8px;cursor:pointer;display:block;width:90%;max-width:400px;transition:transform 0.2s;}
+.upgrade,.autofarm,.cosmetic,.dailyBtn{margin:10px auto;padding:10px 20px;font-size:1.1em;background-color:#8bc34a;border:none;border-radius:8px;cursor:pointer;display:block;width:90%;max-width:400px;transition:transform 0.2s;}
 .upgrade.purchased,.autofarm.purchased,.cosmetic.purchased{animation:flash 0.3s;}
 @keyframes flash{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
 .floating{position:absolute;animation:floatUp 1s ease-out forwards;font-weight:bold;}
 .hiddenTreat{position:absolute;cursor:pointer;width:40px;transition:transform 0.2s;}
 #miniEvent,#rareEvent{position:absolute;font-size:40px;cursor:pointer;display:none;}
 .achievementPopup{position:fixed;top:10%;left:50%;transform:translateX(-50%);background:#ffeb3b;padding:10px 20px;border-radius:10px;display:none;z-index:1000;font-weight:bold;box-shadow:0 0 10px #333;}
-#cosmeticShop{margin-top:30px;}
+#battlePassBar{margin:20px auto;width:90%;max-width:600px;height:30px;background:#ddd;border-radius:15px;overflow:hidden;position:relative;}
+#battlePassProgress{height:100%;width:0%;background:#ff9800;border-radius:15px;}
+#battlePassTier{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-weight:bold;color:#fff;}
 </style>
 </head>
 <body>
@@ -33,6 +35,11 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 ⭐ Good Boys: <span id="goodBoys">0</span><br>
 ⚙️ Auto Treats/sec: <span id="tps">0</span><br>
 ⏱️ Time Played: <span id="timePlayed">0</span> sec
+</div>
+
+<div id="battlePassBar">
+<div id="battlePassProgress"></div>
+<div id="battlePassTier">Tier 0</div>
 </div>
 
 <button id="treatButton">Give Brady a Treat 🍖</button>
@@ -51,11 +58,16 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 <button class="autofarm" id="army">🦮 Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
 </div>
 
-<div id="cosmeticShop" class="section">
+<div class="section" id="cosmeticShop">
 <h2>Cosmetic Shop</h2>
 <button class="cosmetic" id="partyHat">🎩 Party Hat – 200 Treats (Owned: <span id="partyHatCount">0</span>)</button>
 <button class="cosmetic" id="sunglasses">🕶️ Sunglasses – 300 Treats (Owned: <span id="sunglassesCount">0</span>)</button>
 <button class="cosmetic" id="rainbowCape">🌈 Cape – 500 Treats (Owned: <span id="rainbowCapeCount">0</span>)</button>
+</div>
+
+<div class="section">
+<h2>Daily Reward</h2>
+<button class="dailyBtn" id="dailyRewardBtn">Claim Daily Reward 🎁</button>
 </div>
 
 <div id="miniEvent">🌟</div>
@@ -69,6 +81,7 @@ let upgradeCounts={bellyRubs:0,walkies:0,goldenBone:0};
 let farmCounts={squirrel:0,grandma:0,army:0};
 let cosmeticCounts={partyHat:0,sunglasses:0,rainbowCape:0};
 let hiddenFound=0, upgradeBought=0, comboCount=0, lastClick=0, achievementsUnlocked={};
+let bpXP=0, bpTier=0, bpMaxTier=10, bpXPPerTier=100;
 
 // Sounds
 const clickSound=new Audio('https://www.myinstants.com/media/sounds/pop.mp3');
@@ -92,9 +105,9 @@ const cosmetics={
   rainbowCape:{cost:500,counterId:'rainbowCapeCount',emoji:'🌈'}
 };
 
-// Load/save
+// Save/load
 function saveProgress(){ 
-  localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,cosmeticCounts,hiddenFound,upgradeBought,lastDaily:new Date().toDateString(),achievementsUnlocked})); 
+  localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,cosmeticCounts,hiddenFound,upgradeBought,lastDaily:new Date().toDateString(),achievementsUnlocked,bpXP,bpTier})); 
 }
 function loadProgress(){
   const saved=localStorage.getItem('bradyGame');
@@ -107,9 +120,8 @@ function loadProgress(){
     treatsPerClick=data.treatsPerClick||1; treatsPerSecond=data.treatsPerSecond||0;
     timePlayed=data.timePlayed||0; hiddenFound=data.hiddenFound||0; upgradeBought=data.upgradeBought||0;
     achievementsUnlocked=data.achievementsUnlocked||{};
-    if(data.lastDaily!==new Date().toDateString()){
-      treats+=100; showAchievement("Daily Treat Bonus +100!");
-    }
+    bpXP=data.bpXP||0; bpTier=data.bpTier||0;
+    lastDaily=new Date(data.lastDaily||0);
   }
   updateGUI();
 }
@@ -134,44 +146,80 @@ function updateGUI(){
     document.getElementById(cosmetics[key].counterId).textContent=cosmeticCounts[key];
     document.getElementById(key).textContent=`${cosmetics[key].emoji} ${key.replace(/([A-Z])/g,' $1')} – ${cosmetics[key].cost} Treats (Owned: ${cosmeticCounts[key]})`;
   }
+  // Battle Pass
+  const progressPercent=Math.min(100,(bpXP/bpXPPerTier)*100);
+  document.getElementById('battlePassProgress').style.width=progressPercent+'%';
+  document.getElementById('battlePassTier').textContent=`Tier ${bpTier}`;
 }
 
 // Floating text
 function createFloating(text,x,y){ const f=document.createElement('span'); f.className='floating'; f.textContent=text; f.style.left=x+'px'; f.style.top=y+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(),1000);}
-function spawnHiddenTreat(){const t=document.createElement('div'); t.className='hiddenTreat'; t.style.left=Math.random()*window.innerWidth+'px'; t.style.top=Math.random()*window.innerHeight+'px'; t.style.fontSize='30px'; t.textContent='💎'; document.body.appendChild(t); t.addEventListener('click',()=>{ treats+=50; hiddenFound++; createFloating('💎',parseInt(t.style.left),parseInt(t.style.top)); t.remove(); updateGUI(); showAchievement("Hidden Treat Found +50!"); saveProgress();}); setTimeout(()=>{if(t.parentNode)t.remove()},15000);}
-function spawnMiniEvent(){const e=document.getElementById('miniEvent'); e.style.left=Math.random()*(window.innerWidth-50)+'px'; e.style.top=Math.random()*(window.innerHeight-50)+'px'; e.style.display='block'; e.onclick=()=>{ treats+=50; createFloating('🌟',parseInt(e.style.left),parseInt(e.style.top)); eventSound.play(); e.style.display='none'; showAchievement("Mini Event! +50"); updateGUI(); saveProgress();}; setTimeout(()=>{e.style.display='none'},10000);}
-function spawnRareEvent(){if(Math.random()<0.05){const r=document.getElementById('rareEvent'); r.style.left=Math.random()*(window.innerWidth-50)+'px'; r.style.top=Math.random()*(window.innerHeight-50)+'px'; r.style.display='block'; r.onclick=()=>{ treats+=500; createFloating('🌈',parseInt(r.style.left),parseInt(r.style.top)); eventSound.play(); r.style.display='none'; showAchievement("Rare Event! +500"); updateGUI(); saveProgress();}; setTimeout(()=>{r.style.display='none'},10000);}}
-function showAchievement(text){const a=document.getElementById('achievementPopup'); if(achievementsUnlocked[text])return; achievementsUnlocked[text]=true; a.textContent=text; a.style.display='block'; setTimeout(()=>{a.style.display='none'},3000);}
+function showAchievement(text){const a=document.getElementById('achievementPopup'); if(achievementsUnlocked[text])return; achievementsUnlocked[text]=true; a.textContent=text; a.style.display='block'; setTimeout(()=>a.style.display='none',2500);}
 
-// Treat button click
-document.getElementById('treatButton').addEventListener('click',e=>{
+// Treat button
+document.getElementById('treatButton').addEventListener('click',(e)=>{
   const now=Date.now();
-  if(now-lastClick<3000){ comboCount++; if(comboCount>=5){ treats*=2; createFloating('COMBO!',e.pageX,e.pageY); comboCount=0; } } else comboCount=1;
+  if(now-lastClick<1000)comboCount++; else comboCount=0;
   lastClick=now;
-  treats+=treatsPerClick; goodBoys=Math.floor(treats/10);
-  createFloating('🍖',e.pageX,e.pageY); clickSound.play(); updateGUI(); saveProgress();
-});
-
-// Brady image click
-document.getElementById('bradyImage').addEventListener('click',()=>{
-  treats+=5; goodBoys=Math.floor(treats/10); updateGUI(); createFloating('✨',Math.random()*window.innerWidth,Math.random()*window.innerHeight); clickSound.play(); saveProgress();
+  let total=treatsPerClick*(comboCount>=5?2:1);
+  treats+=total; goodBoys=Math.floor(treats/10);
+  createFloating('🍖',window.innerWidth/2,window.innerHeight/2); clickSound.play();
+  bpXP+=1; if(bpXP>=bpXPPerTier){bpXP-=bpXPPerTier; bpTier=Math.min(bpTier+1,bpMaxTier);}
+  updateGUI(); saveProgress();
 });
 
 // Upgrades
-for(const key in upgrades){document.getElementById(key).addEventListener('click',()=>{if(treats>=upgrades[key].cost){treats-=upgrades[key].cost; treatsPerClick+=upgrades[key].bonus; upgradeCounts[key]++; upgrades[key].cost=Math.floor(upgrades[key].cost*1.2); upgradeBought++; createFloating('⭐',window.innerWidth/2,window.innerHeight/2); upgradeSound.play(); document.getElementById(key).classList.add('purchased'); setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300); updateGUI(); saveProgress(); showAchievement(`Upgrade Purchased: ${key}`);}})}
+for(const key in upgrades){document.getElementById(key).addEventListener('click',()=>{const up=upgrades[key];if(treats>=up.cost){treats-=up.cost;treatsPerClick+=up.bonus;upgradeCounts[key]++;up.cost=Math.floor(up.cost*1.2);upgradeSound.play();document.getElementById(key).classList.add('purchased');setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300);updateGUI();saveProgress();}});}
 
-// Auto farms
-for(const key in autoFarms){document.getElementById(key).addEventListener('click',()=>{if(goodBoys>=autoFarms[key].cost){goodBoys-=autoFarms[key].cost; treatsPerSecond+=autoFarms[key].rate; farmCounts[key]++; autoFarms[key].cost=Math.floor(autoFarms[key].cost*1.2); createFloating('⚙️',window.innerWidth/2,window.innerHeight/2); upgradeSound.play(); document.getElementById(key).classList.add('purchased'); setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300); updateGUI(); saveProgress(); showAchievement(`Auto Farm Purchased: ${key}`);}})}
+// Auto Farms
+for(const key in autoFarms){document.getElementById(key).addEventListener('click',()=>{const f=autoFarms[key];if(goodBoys>=f.cost){goodBoys-=f.cost;treatsPerSecond+=f.rate;farmCounts[key]++;f.cost=Math.floor(f.cost*1.2);upgradeSound.play();document.getElementById(key).classList.add('purchased');setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300);updateGUI();saveProgress();}});}
 
 // Cosmetics
-for(const key in cosmetics){document.getElementById(key).addEventListener('click',()=>{if(treats>=cosmetics[key].cost){treats-=cosmetics[key].cost; cosmeticCounts[key]++; cosmetics[key].cost=Math.floor(cosmetics[key].cost*1.2); createFloating(cosmetics[key].emoji,window.innerWidth/2,window.innerHeight/2); upgradeSound.play(); document.getElementById(key).classList.add('purchased'); setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300); updateGUI(); saveProgress(); showAchievement(`Cosmetic Purchased: ${key}`);}})}
+for(const key in cosmetics){document.getElementById(key).addEventListener('click',()=>{const c=cosmetics[key];if(treats>=c.cost){treats-=c.cost;cosmeticCounts[key]++;c.cost=Math.floor(c.cost*1.2);upgradeSound.play();document.getElementById(key).classList.add('purchased');setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300);updateGUI();saveProgress();showAchievement(`Cosmetic Purchased: ${key}`);}});}
 
-// Timed intervals
-setInterval(()=>{treats+=treatsPerSecond; goodBoys=Math.floor(treats/10); timePlayed++; updateGUI(); saveProgress(); spawnRareEvent();},1000);
-setInterval(spawnHiddenTreat,30000);
-setInterval(spawnMiniEvent,20000+Math.random()*20000);
+// Passive income
+setInterval(()=>{treats+=treatsPerSecond; goodBoys=Math.floor(treats/10); timePlayed++; updateGUI(); saveProgress();},1000);
 
-// Initialize
+// Hidden treats
+function spawnHiddenTreat(){ const t=document.createElement('img'); t.src='brady.png'; t.className='hiddenTreat'; t.style.left=Math.random()*(window.innerWidth-50)+'px'; t.style.top=Math.random()*(window.innerHeight-50)+'px'; t.addEventListener('click',()=>{treats+=50; hiddenFound++; createFloating('💎',parseInt(t.style.left),parseInt(t.style.top)); t.remove(); upgradeSound.play(); saveProgress();}); document.body.appendChild(t); setTimeout(()=>{if(t.parentNode)t.remove();},15000);}
+setInterval(spawnHiddenTreat,20000);
+
+// Mini events
+const miniEvent=document.getElementById('miniEvent');
+function triggerMiniEvent(){ miniEvent.style.left=Math.random()*(window.innerWidth-50)+'px'; miniEvent.style.top=Math.random()*(window.innerHeight-50)+'px'; miniEvent.style.display='block'; eventSound.play(); miniEvent.onclick=()=>{treats+=100; bpXP+=10; createFloating('🌟',parseInt(miniEvent.style.left),parseInt(miniEvent.style.top)); miniEvent.style.display='none'; updateGUI(); saveProgress();}} 
+setInterval(triggerMiniEvent,60000);
+
+// Rare events
+const rareEvent=document.getElementById('rareEvent');
+function triggerRareEvent(){ if(Math.random()<0.1){ rareEvent.style.left=Math.random()*(window.innerWidth-50)+'px'; rareEvent.style.top=Math.random()*(window.innerHeight-50)+'px'; rareEvent.style.display='block'; rareEvent.onclick=()=>{treats+=500; bpXP+=50; createFloating('🌈',parseInt(rareEvent.style.left),parseInt(rareEvent.style.top)); rareEvent.style.display='none'; updateGUI(); saveProgress();}}} 
+setInterval(triggerRareEvent,120000);
+
+// Daily reward
+const dailyBtn=document.getElementById('dailyRewardBtn');
+let lastDaily=new Date(localStorage.getItem('lastDaily')||0);
+function checkDailyBtn(){
+    const now=new Date();
+    if(now.toDateString()===lastDaily.toDateString()){
+        dailyBtn.disabled=true;
+        dailyBtn.textContent="Daily Reward Claimed ✅";
+    } else {
+        dailyBtn.disabled=false;
+        dailyBtn.textContent="Claim Daily Reward 🎁";
+    }
+}
+dailyBtn.addEventListener('click',()=>{
+    const reward=50 + bpTier*5; 
+    treats+=reward;
+    createFloating(`+${reward} 🍖`,window.innerWidth/2,window.innerHeight/2);
+    clickSound.play();
+    lastDaily=new Date();
+    localStorage.setItem('lastDaily',lastDaily);
+    checkDailyBtn();
+    updateGUI();
+    saveProgress();
+});
+checkDailyBtn();
+
 loadProgress();
 </script>
 </body>
