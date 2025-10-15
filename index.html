@@ -17,9 +17,9 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 @keyframes flash{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
 .floating{position:absolute;animation:floatUp 1s ease-out forwards;font-weight:bold;}
 .hiddenTreat{position:absolute;cursor:pointer;width:40px;transition:transform 0.2s;}
-#miniEvent{position:absolute;font-size:40px;cursor:pointer;display:none;}
+#miniEvent,#rareEvent{position:absolute;font-size:40px;cursor:pointer;display:none;}
 #tpcImg{width:30px;vertical-align:middle;}
-@keyframes floatUp{0%{opacity:1;transform:translateY(0px);}100%{opacity:0;transform:translateY(-50px);}}
+.achievementPopup{position:fixed;top:10%;left:50%;transform:translateX(-50%);background:#ffeb3b;padding:10px 20px;border-radius:10px;display:none;z-index:1000;font-weight:bold;box-shadow:0 0 10px #333;}
 </style>
 </head>
 <body>
@@ -28,9 +28,9 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 <img id="bradyImage" src="brady.png" alt="Brady">
 
 <div id="stats">
+<img src="brady.png" id="tpcImg" alt="Brady"> Treats per click: <span id="tpc">1</span><br>
 🦴 Treats: <span id="treats">0</span><br>
 ⭐ Good Boys: <span id="goodBoys">0</span><br>
-<img src="brady.png" id="tpcImg" alt="Brady"> Treats per click: <span id="tpc">1</span><br>
 ⚙️ Auto Treats/sec: <span id="tps">0</span><br>
 ⏱️ Time Played: <span id="timePlayed">0</span> sec
 </div>
@@ -52,14 +52,15 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 </div>
 
 <div id="miniEvent">🌟</div>
+<div id="rareEvent">🌈</div>
+<div class="achievementPopup" id="achievementPopup"></div>
 
 <script>
 // Game state
 let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0, timePlayed=0;
 let upgradeCounts={bellyRubs:0,walkies:0,goldenBone:0};
 let farmCounts={squirrel:0,grandma:0,army:0};
-let hiddenFound=0, upgradeBought=0;
-let comboCount=0, lastClick=0;
+let hiddenFound=0, upgradeBought=0, comboCount=0, lastClick=0, achievementsUnlocked={};
 
 // Sounds
 const clickSound=new Audio('https://www.myinstants.com/media/sounds/pop.mp3');
@@ -80,7 +81,7 @@ const autoFarms={
 
 // Load/save
 function saveProgress(){ 
-  localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,hiddenFound,upgradeBought,lastDaily:new Date().toDateString()})); 
+  localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,hiddenFound,upgradeBought,lastDaily:new Date().toDateString(),achievementsUnlocked})); 
 }
 function loadProgress(){
   const saved=localStorage.getItem('bradyGame');
@@ -91,8 +92,9 @@ function loadProgress(){
     treats=data.treats||0; goodBoys=data.goodBoys||0;
     treatsPerClick=data.treatsPerClick||1; treatsPerSecond=data.treatsPerSecond||0;
     timePlayed=data.timePlayed||0; hiddenFound=data.hiddenFound||0; upgradeBought=data.upgradeBought||0;
+    achievementsUnlocked=data.achievementsUnlocked||{};
     if(data.lastDaily!==new Date().toDateString()){
-      treats+=100; alert("🎉 Daily Treat Bonus! +100 treats");
+      treats+=100; showAchievement("Daily Treat Bonus +100!");
     }
   }
   updateGUI();
@@ -118,21 +120,13 @@ function updateGUI(){
 
 // Floating text
 function createFloating(text,x,y){ const f=document.createElement('span'); f.className='floating'; f.textContent=text; f.style.left=x+'px'; f.style.top=y+'px'; document.body.appendChild(f); setTimeout(()=>f.remove(),1000);}
+function spawnHiddenTreat(){const t=document.createElement('div'); t.className='hiddenTreat'; t.style.left=Math.random()*window.innerWidth+'px'; t.style.top=Math.random()*window.innerHeight+'px'; t.style.fontSize='30px'; t.textContent='💎'; document.body.appendChild(t); t.addEventListener('click',()=>{ treats+=50; hiddenFound++; createFloating('💎',parseInt(t.style.left),parseInt(t.style.top)); t.remove(); updateGUI(); showAchievement("Hidden Treat Found +50!"); saveProgress();}); setTimeout(()=>{if(t.parentNode)t.remove()},15000);}
+function spawnMiniEvent(){const e=document.getElementById('miniEvent'); e.style.left=Math.random()*(window.innerWidth-50)+'px'; e.style.top=Math.random()*(window.innerHeight-50)+'px'; e.style.display='block'; e.onclick=()=>{ treats+=50; createFloating('🌟',parseInt(e.style.left),parseInt(e.style.top)); eventSound.play(); e.style.display='none'; showAchievement("Mini Event! +50"); updateGUI(); saveProgress();}; setTimeout(()=>{e.style.display='none'},10000);}
+function spawnRareEvent(){if(Math.random()<0.05){const r=document.getElementById('rareEvent'); r.style.left=Math.random()*(window.innerWidth-50)+'px'; r.style.top=Math.random()*(window.innerHeight-50)+'px'; r.style.display='block'; r.onclick=()=>{ treats+=500; createFloating('🌈',parseInt(r.style.left),parseInt(r.style.top)); eventSound.play(); r.style.display='none'; showAchievement("Rare Event! +500"); updateGUI(); saveProgress();}; setTimeout(()=>{r.style.display='none'},10000);}}
 
-// Hidden treats
-function spawnHiddenTreat(){const t=document.createElement('div'); t.className='hiddenTreat'; t.style.left=Math.random()*window.innerWidth+'px'; t.style.top=Math.random()*window.innerHeight+'px'; t.style.fontSize='30px'; t.textContent='💎'; document.body.appendChild(t); t.addEventListener('click',()=>{ treats+=50; hiddenFound++; createFloating('💎',parseInt(t.style.left),parseInt(t.style.top)); t.remove(); updateGUI(); saveProgress();}); setTimeout(()=>{if(t.parentNode)t.remove()},15000);}
+function showAchievement(text){const a=document.getElementById('achievementPopup'); if(achievementsUnlocked[text])return; achievementsUnlocked[text]=true; a.textContent=text; a.style.display='block'; setTimeout(()=>{a.style.display='none'},3000);}
 
-// Mini event
-function spawnMiniEvent(){
-  const e=document.getElementById('miniEvent');
-  e.style.left=Math.random()*(window.innerWidth-50)+'px';
-  e.style.top=Math.random()*(window.innerHeight-50)+'px';
-  e.style.display='block';
-  e.onclick=()=>{ treats+=50; createFloating('🌟',parseInt(e.style.left),parseInt(e.style.top)); eventSound.play(); e.style.display='none'; updateGUI(); saveProgress(); };
-  setTimeout(()=>{e.style.display='none'},10000);
-}
-
-// Click treat
+// Treat button click
 document.getElementById('treatButton').addEventListener('click',e=>{
   const now=Date.now();
   if(now-lastClick<3000){ comboCount++; if(comboCount>=5){ treats*=2; createFloating('COMBO!',e.pageX,e.pageY); comboCount=0; } } else comboCount=1;
@@ -141,46 +135,19 @@ document.getElementById('treatButton').addEventListener('click',e=>{
   createFloating('🍖',e.pageX,e.pageY); clickSound.play(); updateGUI(); saveProgress();
 });
 
-// Brady click bonus
+// Brady image click
 document.getElementById('bradyImage').addEventListener('click',()=>{
   treats+=5; goodBoys=Math.floor(treats/10); updateGUI(); createFloating('✨',Math.random()*window.innerWidth,Math.random()*window.innerHeight); clickSound.play(); saveProgress();
 });
 
 // Upgrades
-for(const key in upgrades){
-  document.getElementById(key).addEventListener('click',()=>{
-    if(treats>=upgrades[key].cost){
-      treats-=upgrades[key].cost; treatsPerClick+=upgrades[key].bonus;
-      upgradeCounts[key]++; upgrades[key].cost=Math.floor(upgrades[key].cost*1.2); upgradeBought++;
-      createFloating('⭐',window.innerWidth/2,window.innerHeight/2); upgradeSound.play();
-      document.getElementById(key).classList.add('purchased');
-      setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300);
-      updateGUI(); saveProgress();
-    }
-  });
-}
+for(const key in upgrades){document.getElementById(key).addEventListener('click',()=>{if(treats>=upgrades[key].cost){treats-=upgrades[key].cost; treatsPerClick+=upgrades[key].bonus; upgradeCounts[key]++; upgrades[key].cost=Math.floor(upgrades[key].cost*1.2); upgradeBought++; createFloating('⭐',window.innerWidth/2,window.innerHeight/2); upgradeSound.play(); document.getElementById(key).classList.add('purchased'); setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300); updateGUI(); saveProgress(); showAchievement(`Upgrade Purchased: ${key}`);}})}
 
 // Auto farms
-for(const key in autoFarms){
-  document.getElementById(key).addEventListener('click',()=>{
-    if(goodBoys>=autoFarms[key].cost){
-      goodBoys-=autoFarms[key].cost; treatsPerSecond+=autoFarms[key].rate;
-      farmCounts[key]++; autoFarms[key].cost=Math.floor(autoFarms[key].cost*1.2);
-      createFloating('⚙️',window.innerWidth/2,window.innerHeight/2); upgradeSound.play();
-      document.getElementById(key).classList.add('purchased');
-      setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300);
-      updateGUI(); saveProgress();
-    }
-  });
-}
+for(const key in autoFarms){document.getElementById(key).addEventListener('click',()=>{if(goodBoys>=autoFarms[key].cost){goodBoys-=autoFarms[key].cost; treatsPerSecond+=autoFarms[key].rate; farmCounts[key]++; autoFarms[key].cost=Math.floor(autoFarms[key].cost*1.2); createFloating('⚙️',window.innerWidth/2,window.innerHeight/2); upgradeSound.play(); document.getElementById(key).classList.add('purchased'); setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300); updateGUI(); saveProgress(); showAchievement(`Auto Farm Purchased: ${key}`);}})}
 
 // Timed intervals
-setInterval(()=>{
-  treats+=treatsPerSecond;
-  goodBoys=Math.floor(treats/10);
-  timePlayed++; updateGUI(); saveProgress();
-},1000);
-
+setInterval(()=>{treats+=treatsPerSecond; goodBoys=Math.floor(treats/10); timePlayed++; updateGUI(); saveProgress(); spawnRareEvent();},1000);
 setInterval(spawnHiddenTreat,30000);
 setInterval(spawnMiniEvent,20000+Math.random()*20000);
 
