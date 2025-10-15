@@ -106,29 +106,16 @@ function loadProgress(){
   const saved=localStorage.getItem('bradyGame');
   if(saved){
     const data=JSON.parse(saved);
-    treats=data.treats||0;
-    goodBoys=data.goodBoys||0;
-    treatsPerClick=data.treatsPerClick||1;
-    treatsPerSecond=data.treatsPerSecond||0;
-    timePlayed=data.timePlayed||0;
-    clickStreak=data.clickStreak||0;
-    hiddenFound=data.hiddenFound||0;
-    upgradeBought=data.upgradeBought||0;
-    eventCaught=data.eventCaught||0;
-    petsOwned=data.petsOwned||{puppy:0,kitten:0};
+    treats=data.treats||0; goodBoys=data.goodBoys||0;
+    treatsPerClick=data.treatsPerClick||1; treatsPerSecond=data.treatsPerSecond||0;
+    timePlayed=data.timePlayed||0; clickStreak=data.clickStreak||0;
+    hiddenFound=data.hiddenFound||0; upgradeBought=data.upgradeBought||0;
+    eventCaught=data.eventCaught||0; petsOwned=data.petsOwned||{puppy:0,kitten:0};
     Object.assign(upgrades,data.upgrades||upgrades);
     Object.assign(autoFarms,data.autoFarms||autoFarms);
   }
-  for(const key in upgrades){
-    upgrades[key].owned=upgrades[key].owned||0;
-    document.getElementById(upgrades[key].counterId).textContent=upgrades[key].owned;
-    document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${upgrades[key].bonus}/click) – ${upgrades[key].cost} Treats (Owned: ${upgrades[key].owned})`;
-  }
-  for(const key in autoFarms){
-    autoFarms[key].owned=autoFarms[key].owned||0;
-    document.getElementById(autoFarms[key].counterId).textContent=autoFarms[key].owned;
-    document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${autoFarms[key].rate}/sec) – ${autoFarms[key].cost} Good Boys (Owned: ${autoFarms[key].owned})`;
-  }
+  for(const key in upgrades){ upgrades[key].owned=upgrades[key].owned||0; document.getElementById(upgrades[key].counterId).textContent=upgrades[key].owned; document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${upgrades[key].bonus}/click) – ${upgrades[key].cost} Treats (Owned: ${upgrades[key].owned})`;}
+  for(const key in autoFarms){ autoFarms[key].owned=autoFarms[key].owned||0; document.getElementById(autoFarms[key].counterId).textContent=autoFarms[key].owned; document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${autoFarms[key].rate}/sec) – ${autoFarms[key].cost} Good Boys (Owned: ${autoFarms[key].owned})`;}
   updateStats();
 }
 
@@ -139,23 +126,18 @@ function updateStats(){
   document.getElementById('tpc').textContent=treatsPerClick;
   document.getElementById('tps').textContent=treatsPerSecond;
   document.getElementById('timePlayed').textContent=timePlayed;
-  checkAchievements();
 }
 
 // Floating
-function createFloating(text,x,y){ const span=document.createElement('span'); span.className='floating'; span.textContent=text; span.style.left=x+'px'; span.style.top=y+'px'; document.body.appendChild(span); setTimeout(()=>span.remove(),1000); }
-function burstConfetti(){ for(let i=0;i<20;i++){ const c=document.createElement('div'); c.className='confetti'; c.style.left=Math.random()*window.innerWidth+'px'; c.style.background=`hsl(${Math.random()*360},100%,50%)`; document.body.appendChild(c); setTimeout(()=>c.remove(),1000); }}
+function createFloating(text,x,y){ const span=document.createElement('span'); span.className='floating'; span.textContent=text; span.style.left=x+'px'; span.style.top=y+'px'; document.body.appendChild(span); setTimeout(()=>span.remove(),1000);}
+function burstConfetti(){for(let i=0;i<20;i++){const c=document.createElement('div');c.className='confetti';c.style.left=Math.random()*window.innerWidth+'px';c.style.background=`hsl(${Math.random()*360},100%,50%)`;document.body.appendChild(c);setTimeout(()=>c.remove(),1000);}}
 
 // Treat click
 document.getElementById('treatButton').addEventListener('click',e=>{
   let bonus=treatsPerClick;
   if(Math.random()<0.1){ bonus*=5; critSound.play(); burstConfetti();}
-  treats+=bonus;
-  goodBoys=Math.floor(treats/10);
-  clickStreak++;
-  createFloating('🍖',e.pageX,e.pageY);
-  if(clickStreak%10===0) burstConfetti();
-  updateStats(); clickSound.play(); saveProgress();
+  treats+=bonus; goodBoys=Math.floor(treats/10); clickStreak++;
+  createFloating('🍖',e.pageX,e.pageY); updateStats(); clickSound.play(); saveProgress();
 });
 
 // Brady image click
@@ -172,9 +154,7 @@ for(const key in upgrades){
   upgrades[key].owned=0;
   document.getElementById(key).addEventListener('click',()=>{
     const up=upgrades[key];
-    if(treats>=up.cost){
-      treats-=up.cost; treatsPerClick+=up.bonus; up.owned++; upgradeBought++;
-      up.cost=Math.floor(up.cost*1.2);
+    if(treats>=up.cost){ treats-=up.cost; treatsPerClick+=up.bonus; up.owned++; up.cost=Math.floor(up.cost*1.2);
       document.getElementById(up.counterId).textContent=up.owned;
       document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${up.bonus}/click) – ${up.cost} Treats (Owned: ${up.owned})`;
       upgradeSound.play(); burstConfetti(); updateStats(); saveProgress();
@@ -187,9 +167,7 @@ for(const key in autoFarms){
   autoFarms[key].owned=0;
   document.getElementById(key).addEventListener('click',()=>{
     const farm=autoFarms[key];
-    if(goodBoys>=farm.cost){
-      goodBoys-=farm.cost; treatsPerSecond+=farm.rate; farm.owned++;
-      farm.cost=Math.floor(farm.cost*1.2);
+    if(goodBoys>=farm.cost){ goodBoys-=farm.cost; treatsPerSecond+=farm.rate; farm.owned++; farm.cost=Math.floor(farm.cost*1.2);
       document.getElementById(farm.counterId).textContent=farm.owned;
       document.getElementById(key).textContent=`${key.replace(/([A-Z])/g,' $1')} (+${farm.rate}/sec) – ${farm.cost} Good Boys (Owned: ${farm.owned})`;
       upgradeSound.play(); updateStats(); saveProgress();
@@ -202,16 +180,15 @@ document.getElementById('puppy').addEventListener('click',()=>{if(treats>=50){tr
 document.getElementById('kitten').addEventListener('click',()=>{if(treats>=200){treats-=200;petsOwned.kitten++; treatsPerSecond+=5; updateStats(); upgradeSound.play(); saveProgress();}});
 
 // Hidden treats
-function spawnHiddenTreat(){const treat=document.createElement('img'); treat.src='special_treat.png'; treat.className='hiddenTreat'; treat.style.left=Math.random()*window.innerWidth+'px'; treat.style.top=Math.random()*window.innerHeight+'px'; document.body.appendChild(treat); treat.addEventListener('click',()=>{treats+=50; goodBoys=Math.floor(treats/10); hiddenFound++; createFloating('💎',parseInt(treat.style.left),parseInt(treat.style.top)); document.body.removeChild(treat); burstConfetti(); updateStats(); saveProgress();}); setTimeout(()=>{if(treat.parentNode)treat.parentNode.removeChild(treat);},15000);}
+function spawnHiddenTreat(){const treat=document.createElement('img'); treat.src='special_treat.png'; treat.className='hiddenTreat'; treat.style.left=Math.random()*window.innerWidth+'px'; treat.style.top=Math.random()*window.innerHeight+'px'; document.body.appendChild(treat); treat.addEventListener('click',()=>{treats+=50; goodBoys=Math.floor(treats/10); createFloating('💎',parseInt(treat.style.left),parseInt(treat.style.top)); document.body.removeChild(treat); burstConfetti(); updateStats(); saveProgress();}); setTimeout(()=>{if(treat.parentNode)treat.parentNode.removeChild(treat);},15000);}
 setInterval(spawnHiddenTreat,30000);
-
-// Dynamic events
-function spawnDynamicEvent(){const event=document.createElement('div'); event.className='dynamicEvent'; event.textContent='Click me fast!'; event.style.left=Math.random()*(window.innerWidth-100)+'px'; event.style.top=Math.random()*(window.innerHeight-50)+'px'; document.body.appendChild(event); event.addEventListener('click',()=>{treats+=100; eventCaught++; createFloating('🎉',parseInt(event.style.left),parseInt(event.style.top)); eventSound.play(); document.body.removeChild(event); burstConfetti(); updateStats(); saveProgress();}); setTimeout(()=>{if(event.parentNode) event.parentNode.removeChild(event);},10000);}
-setInterval(spawnDynamicEvent,60000);
 
 // Passive income & time
 setInterval(()=>{ treats+=treatsPerSecond; goodBoys=Math.floor(treats/10); timePlayed++; updateStats(); saveProgress(); },1000);
 
-// Achievements
-function checkAchievements(){
-  if(treats>=100
+// Load progress initially
+loadProgress();
+</script>
+
+</body>
+</html>
