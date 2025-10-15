@@ -12,14 +12,14 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 #treatButton{margin-top:20px;padding:20px 40px;font-size:2em;background-color:#ffcc00;border:none;border-radius:12px;cursor:pointer;width:90%;max-width:400px;}
 #stats{margin:20px;font-size:1.5em;}
 .section{margin-top:30px;}
-.upgrade,.autofarm{margin:10px auto;padding:10px 20px;font-size:1.1em;background-color:#8bc34a;border:none;border-radius:8px;cursor:pointer;display:block;width:90%;max-width:400px;transition:transform 0.2s;}
-.upgrade.purchased,.autofarm.purchased{animation:flash 0.3s;}
+.upgrade,.autofarm,.cosmetic{margin:10px auto;padding:10px 20px;font-size:1.1em;background-color:#8bc34a;border:none;border-radius:8px;cursor:pointer;display:block;width:90%;max-width:400px;transition:transform 0.2s;}
+.upgrade.purchased,.autofarm.purchased,.cosmetic.purchased{animation:flash 0.3s;}
 @keyframes flash{0%{transform:scale(1);}50%{transform:scale(1.2);}100%{transform:scale(1);}}
 .floating{position:absolute;animation:floatUp 1s ease-out forwards;font-weight:bold;}
 .hiddenTreat{position:absolute;cursor:pointer;width:40px;transition:transform 0.2s;}
 #miniEvent,#rareEvent{position:absolute;font-size:40px;cursor:pointer;display:none;}
-#tpcImg{width:30px;vertical-align:middle;}
 .achievementPopup{position:fixed;top:10%;left:50%;transform:translateX(-50%);background:#ffeb3b;padding:10px 20px;border-radius:10px;display:none;z-index:1000;font-weight:bold;box-shadow:0 0 10px #333;}
+#cosmeticShop{margin-top:30px;}
 </style>
 </head>
 <body>
@@ -51,6 +51,13 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 <button class="autofarm" id="army">🦮 Golden Retriever Army (+20/sec) – 100 Good Boys (Owned: <span id="armyCount">0</span>)</button>
 </div>
 
+<div id="cosmeticShop" class="section">
+<h2>Cosmetic Shop</h2>
+<button class="cosmetic" id="partyHat">🎩 Party Hat – 200 Treats (Owned: <span id="partyHatCount">0</span>)</button>
+<button class="cosmetic" id="sunglasses">🕶️ Sunglasses – 300 Treats (Owned: <span id="sunglassesCount">0</span>)</button>
+<button class="cosmetic" id="rainbowCape">🌈 Cape – 500 Treats (Owned: <span id="rainbowCapeCount">0</span>)</button>
+</div>
+
 <div id="miniEvent">🌟</div>
 <div id="rareEvent">🌈</div>
 <div class="achievementPopup" id="achievementPopup"></div>
@@ -60,6 +67,7 @@ button:hover{transform:scale(1.05);background-color:#7cb342;}
 let treats=0, goodBoys=0, treatsPerClick=1, treatsPerSecond=0, timePlayed=0;
 let upgradeCounts={bellyRubs:0,walkies:0,goldenBone:0};
 let farmCounts={squirrel:0,grandma:0,army:0};
+let cosmeticCounts={partyHat:0,sunglasses:0,rainbowCape:0};
 let hiddenFound=0, upgradeBought=0, comboCount=0, lastClick=0, achievementsUnlocked={};
 
 // Sounds
@@ -78,10 +86,15 @@ const autoFarms={
   grandma:{cost:20,rate:5,counterId:'grandmaCount'},
   army:{cost:100,rate:20,counterId:'armyCount'}
 };
+const cosmetics={
+  partyHat:{cost:200,counterId:'partyHatCount',emoji:'🎩'},
+  sunglasses:{cost:300,counterId:'sunglassesCount',emoji:'🕶️'},
+  rainbowCape:{cost:500,counterId:'rainbowCapeCount',emoji:'🌈'}
+};
 
 // Load/save
 function saveProgress(){ 
-  localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,hiddenFound,upgradeBought,lastDaily:new Date().toDateString(),achievementsUnlocked})); 
+  localStorage.setItem('bradyGame',JSON.stringify({treats,goodBoys,treatsPerClick,treatsPerSecond,timePlayed,upgradeCounts,farmCounts,cosmeticCounts,hiddenFound,upgradeBought,lastDaily:new Date().toDateString(),achievementsUnlocked})); 
 }
 function loadProgress(){
   const saved=localStorage.getItem('bradyGame');
@@ -89,6 +102,7 @@ function loadProgress(){
     const data=JSON.parse(saved);
     Object.assign(upgradeCounts,data.upgradeCounts||upgradeCounts);
     Object.assign(farmCounts,data.farmCounts||farmCounts);
+    Object.assign(cosmeticCounts,data.cosmeticCounts||cosmeticCounts);
     treats=data.treats||0; goodBoys=data.goodBoys||0;
     treatsPerClick=data.treatsPerClick||1; treatsPerSecond=data.treatsPerSecond||0;
     timePlayed=data.timePlayed||0; hiddenFound=data.hiddenFound||0; upgradeBought=data.upgradeBought||0;
@@ -116,6 +130,10 @@ function updateGUI(){
     const emoji = key==='squirrel'?'🐿️':key==='grandma'?'👵':'🦮';
     document.getElementById(key).textContent=`${emoji} ${key.replace(/([A-Z])/g,' $1')} (+${autoFarms[key].rate}/sec) – ${autoFarms[key].cost} Good Boys (Owned: ${farmCounts[key]})`;
   }
+  for(const key in cosmetics){
+    document.getElementById(cosmetics[key].counterId).textContent=cosmeticCounts[key];
+    document.getElementById(key).textContent=`${cosmetics[key].emoji} ${key.replace(/([A-Z])/g,' $1')} – ${cosmetics[key].cost} Treats (Owned: ${cosmeticCounts[key]})`;
+  }
 }
 
 // Floating text
@@ -123,7 +141,6 @@ function createFloating(text,x,y){ const f=document.createElement('span'); f.cla
 function spawnHiddenTreat(){const t=document.createElement('div'); t.className='hiddenTreat'; t.style.left=Math.random()*window.innerWidth+'px'; t.style.top=Math.random()*window.innerHeight+'px'; t.style.fontSize='30px'; t.textContent='💎'; document.body.appendChild(t); t.addEventListener('click',()=>{ treats+=50; hiddenFound++; createFloating('💎',parseInt(t.style.left),parseInt(t.style.top)); t.remove(); updateGUI(); showAchievement("Hidden Treat Found +50!"); saveProgress();}); setTimeout(()=>{if(t.parentNode)t.remove()},15000);}
 function spawnMiniEvent(){const e=document.getElementById('miniEvent'); e.style.left=Math.random()*(window.innerWidth-50)+'px'; e.style.top=Math.random()*(window.innerHeight-50)+'px'; e.style.display='block'; e.onclick=()=>{ treats+=50; createFloating('🌟',parseInt(e.style.left),parseInt(e.style.top)); eventSound.play(); e.style.display='none'; showAchievement("Mini Event! +50"); updateGUI(); saveProgress();}; setTimeout(()=>{e.style.display='none'},10000);}
 function spawnRareEvent(){if(Math.random()<0.05){const r=document.getElementById('rareEvent'); r.style.left=Math.random()*(window.innerWidth-50)+'px'; r.style.top=Math.random()*(window.innerHeight-50)+'px'; r.style.display='block'; r.onclick=()=>{ treats+=500; createFloating('🌈',parseInt(r.style.left),parseInt(r.style.top)); eventSound.play(); r.style.display='none'; showAchievement("Rare Event! +500"); updateGUI(); saveProgress();}; setTimeout(()=>{r.style.display='none'},10000);}}
-
 function showAchievement(text){const a=document.getElementById('achievementPopup'); if(achievementsUnlocked[text])return; achievementsUnlocked[text]=true; a.textContent=text; a.style.display='block'; setTimeout(()=>{a.style.display='none'},3000);}
 
 // Treat button click
@@ -145,6 +162,9 @@ for(const key in upgrades){document.getElementById(key).addEventListener('click'
 
 // Auto farms
 for(const key in autoFarms){document.getElementById(key).addEventListener('click',()=>{if(goodBoys>=autoFarms[key].cost){goodBoys-=autoFarms[key].cost; treatsPerSecond+=autoFarms[key].rate; farmCounts[key]++; autoFarms[key].cost=Math.floor(autoFarms[key].cost*1.2); createFloating('⚙️',window.innerWidth/2,window.innerHeight/2); upgradeSound.play(); document.getElementById(key).classList.add('purchased'); setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300); updateGUI(); saveProgress(); showAchievement(`Auto Farm Purchased: ${key}`);}})}
+
+// Cosmetics
+for(const key in cosmetics){document.getElementById(key).addEventListener('click',()=>{if(treats>=cosmetics[key].cost){treats-=cosmetics[key].cost; cosmeticCounts[key]++; cosmetics[key].cost=Math.floor(cosmetics[key].cost*1.2); createFloating(cosmetics[key].emoji,window.innerWidth/2,window.innerHeight/2); upgradeSound.play(); document.getElementById(key).classList.add('purchased'); setTimeout(()=>document.getElementById(key).classList.remove('purchased'),300); updateGUI(); saveProgress(); showAchievement(`Cosmetic Purchased: ${key}`);}})}
 
 // Timed intervals
 setInterval(()=>{treats+=treatsPerSecond; goodBoys=Math.floor(treats/10); timePlayed++; updateGUI(); saveProgress(); spawnRareEvent();},1000);
